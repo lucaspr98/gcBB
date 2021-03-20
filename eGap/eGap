@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+
+import sys, time, argparse, subprocess, os.path, shutil, struct
+from psutil import virtual_memory
+
+Version = "v2.1"
+
+Description = """Tool to build the BWT and optionally the LCP and DA array for a collection 
+of sequences in external memory. There are two different usages depending 
+on whether you already have the BWT of the input files:
+
+If you do have the BWTs use option -b: you must specify the file names on 
+the command line and use the option -o to specify an output basename. 
+For example
+  {exe} -bl -o merge  file1.bwt file2.bwt
+will produce the output files merge.bwt, merge.2.lcp, merge.da
+Globbing works: multiple files can be denoted for example by file*.bwt
+ 
+If you don't have the BWTs then your input must consists of a single file
+with extension 
+  .fasta/.fa (one input document per sequence)
+  .fastq     (one input document per sequence)
+  .txt       (one input document per line)
+and it is not mandatory to specify the output basename. For example:
+  {exe} -l  file.fasta 
+this will produce the output files file.fasta.bwt, file.fasta.2.lcp
+
+The option --lbytes specifies the number of bytes used for each LCP entry
+and such number becomes part of the lcp file name.
+
+The option --dbytes specifies the number of bytes used for each DA entry
+and such number becomes part of the da file name.
+
+The option --sbytes specifies the number of bytes used for each SA entry
+and such number becomes part of the da file name.
+
+All input and output files are uncompressed!
+
+--------------------------
+Command line options:
+--------------------------
+""".format(exe=sys.argv[0])
+
+gsacak_exe = "tools/gsacak"
+gsacak64_exe = "tools/gsacak-64"
+gap_exe = "gap"
+mergelcp_exe = "tools/mergelcp" 
+shasum_exe = "sha1sum"
+POS_SIZE = 5    # must be equal to POS_SIZE in config.h
+
+
+def main():
+  # init commad line parser 
+  parser = argparse.ArgumentParser(description=Description, formatter_class=argparse.RawTextHelpFormatter)
+  parser.add_argument('input', help='input file name(s)', type=str, nargs='+')
+  parser.add_argument('-m', '--mem', help='use at most M MBs (def. 95%% of available RAM)',default=-1, type=int)
+  parser.add_argument('-o', '--out', help='output base name (def. input base name)', default="", type=str)  
+  parser.add_argument('-b', '--bwt', help='inputs are bwt files',action='store_true')
+  parser.add_argument('-l', '--lcp', help='compute LCP Array',action='store_true')
+  parser.add_argument('-d', '--da',  help='compute Document Array',action='store_true')
+  parser.add_argument('-s', '--sa', help='output SA (ext: .sa)',action='store_true')
+  parser.add_argument('-r', '--rev', help='compute data structures for the reversed string',action='store_true')
+  parser.add_argument('--lbytes', help='bytes x LCP entry (def. 2)', default=2, type=int)  
+  parser.add_argument('--dbytes', help='bytes x DA entry (def. 4)', default=4, type=int)  
+  parser.add_argument('--sbytes', help='bytes x SA entry (def. 4)', default=4, type=int)  
+  parser.add_argument('--trlcp', help='compute LCP values only up to TRLCP (truncated LCP)', default=0, type=int)
+  parser.add_argument('--deB', help='compute info for building a deBruijn graph of order DEB', default=0, type=int)
+  parser.add_argument('--sum', help='compute output files shasum',action='store_true')
+  parser.add_argument('--delete', help='delete output files (only with --sum)',action='store_true')
+  parser.add_argument('-1', '--phase1', help='stop after phase 1 (debug only)',action='store_true')  
+  parser.add_argument('-2', '--phase2', help='stop after phase 2 (debug only)',action='store_true')  
+  parser.add_argument('-v',  help='verbose: extra info in the log file',action='store_true')
+  #requiredNamed = parser.add_argument_group('required named arguments')
+  #requiredNamed.add_argument('-m', '--mem', help='RAM assigned to the computation in MB (%d suggested)' % mem, type=int, required=True)
+  args = parser.parse_args()
+  # if no max RAM provided on command line uses 95% of total 
+  if(args.mem<0):
+    mem = virtual_memory().total
+    args.mem = max(16,int(0.95*mem/2**20)) # avoid accidental 0 
+    print("Using {0} MBs of RAM".format(args.mem))
+     
+  # ---- check number of input files and define basename
+  check_input(args)
+  # ---- create and open log file
+  logfile_name = args.basename + ".eGap.log"
+  # get main eGap directory 
+  args.egap_dir = os.path.split(sys.argv[0])[0]
+  print("Sending logging messages to file:", logfile_name)
+  with open(logfile_name,"a") as logfile:  
+
+    print(">>> Begin computation",file=logfile)
+    print(">>> eGap version " + Version,file=logfile)
+    show_command_line(logfile)
+    print("Using {0} MBs of RAM".format(args.mem), file=logfile)
+    logfile.flush()
+
+    # ---- phase1: concatenate/compute BWTs
+    start0 = start = time.time()
+    if phase1(args,logfile,logfile_name)!=True:
+      sys.exit(1)   # fatal error during phase 1 
+    print("Elapsed time: {0:.4f}".format(time.time()-start))
+    if args.phase1:
+      print("Exiting after phase 1 as requested")
+      return 
+
+    # ---- phase2: merging of BWTs and computation of LCP and DA arrays
+    start = time.time()  
+    if phase2(args,logfile,logfile_name)!=True:
+      sys.exit(1)   # fatal error during phase 2 
+    print("Elapsed time: {0:.4f}".format(time.time()-start));
+    try:
+      os.remove(args.basename +".size")   # delete size file no longer useful 
+    except OSError as  e:                 # if failed, report it back to the user and stop
+      print ("Error: %s - %s." % (e.filename,e.strerror))
+      sys.exit(1)         
+    if args.phase2:
+      print("Exiting after phase 2 as requested")
+      return
+
+    # ---- phase3: merging of LCP values
+    if args.lcp or args.trlcp>0:
+      start = time.time()
+      if phase3(args,logfile,logfile_name)!=True:
+        sys.exit(1)   # fatal error during phase 3 
+      print("Elapsed time: {0:.4f}".format(time.time()-start))      
+
+    # ---- final report
+    elapsed = time.time()-start0
+    outsize = os.path.getsize(args.basename+".bwt")
+    musecbyte = elapsed*10**6/(outsize)
+    print("==== Done")
+    print("Total construction time: {0:.4f}   usec/byte: {1:.4f} (outsize: {2})".format(elapsed,musecbyte,outsize))
+    # -------- compute hash sums using shasum_exe
+    if args.sum :
+      digest = file_digest(args.basename +".bwt",logfile)
+      print("BWT {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+      if (args.lcp or args.trlcp):
+        digest = file_digest("{f}.{n}.lcp".format(f=args.basename,n=args.lbytes),logfile)
+        print("LCP {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+      if (args.deB):
+        digest = file_digest("{f}.{n}.lcpbit0".format(f=args.basename,n=args.deB),logfile)
+        print("LCP_0 {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+        digest = file_digest("{f}.{n}.lcpbit1".format(f=args.basename,n=args.deB),logfile)
+        print("LCP_1 {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+      if args.da:
+        digest = file_digest("{f}.{n}.da".format(f=args.basename,n=args.dbytes),logfile)
+        print("DA  {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+      if args.sa:
+        digest = file_digest("{f}.{n}.sa".format(f=args.basename,n=args.sbytes),logfile)
+        print("SA  {exe}: {digest}".format(exe=shasum_exe, digest=digest))
+    # -------- delete output files if required 
+    if (args.sum and args.delete):
+      try:
+        os.remove(args.basename+".bwt")
+        if args.lcp:
+          os.remove("{f}.{n}.lcp".format(f=args.basename,n=args.lbytes))
+        if args.da:
+          #os.remove(args.basename+".da")
+          os.remove("{f}.{n}.da".format(f=args.basename,n=args.dbytes))
+        if args.sa:
+          os.remove("{f}.{n}.sa".format(f=args.basename,n=args.sbytes))
+      except OSError as  e:                 
+        # if failed, report it back to the user and stop
+        print ("Error: %s - %s." % (e.filename,e.strerror))
+    print(">>> End test", file=logfile);
+  return
+
+  
+# compute hash digest for a file 
+def file_digest(name,logfile):
+    try:
+      hash_command = "{exe} {infile}".format(exe=shasum_exe, infile=name)
+      hashsum = subprocess.check_output(hash_command.split(),stderr=logfile)
+      hashsum = hashsum.decode("utf-8").split()[0]
+    except:
+      hashsum = "Error!" 
+    return hashsum  
+
+# check correctness of number of input file and define basename for output
+def check_input(args):
+  # ---- if the inputs are bwt there must be at least 2 of them
+  if args.bwt:
+    if len(args.input)<2:
+      print("You must supply at least 2 input BWT files!")
+      sys.exit(1)
+    if len(args.out)==0:
+      print("Please use option -o to specify an output basename!")
+      sys.exit(1)
+    if (args.sa):
+      print("SA construction not supported for merging BWT files!")
+      sys.exit(1)
+    args.basename = args.out
+  # ---- if the input are concatenated texts there is a single file
+  else:
+    if len(args.input)!=1:
+      print("You must supply a single file containing the concatenation of the input texts!")
+      sys.exit(1)
+    if len(args.out)==0:       # specify basename for input files gap+merge
+      args.basename = args.input[0]
+    else:
+      args.basename = args.out
+  # tests common to the two operation modes   
+  if args.lbytes!=1 and args.lbytes!=2 and args.lbytes!=4:
+    print("The number of bytes for LCP entry must be 1, 2 or 4")
+    sys.exit(1)
+  if args.dbytes!=1 and args.dbytes!=2 and args.dbytes!=4:
+    print("The number of bytes for DA entry must be 1, 2 or 4")
+    sys.exit(1)
+  if args.sbytes!=1 and args.sbytes!=2 and args.sbytes!=4:
+    print("The number of bytes for SA entry must be 1, 2 or 4")
+    sys.exit(1)
+  if args.delete and not args.sum:
+    print("Option --delete can only be used with --sum")
+    sys.exit(1) 
+  if args.lcp and args.trlcp>0:
+    print("You can compute either the true LCP values of the truncated values, not both!")
+    sys.exit(1) 
+  if (args.lcp or args.trlcp>0) and args.deB>0:
+    print("You can compute either the LCP values or the de Bruijn graph info, not both!")
+    sys.exit(1) 
+  if 0 < args.deB <2 or 0 < args.trlcp < 2:
+    print("Options --deB/--trlcp requires a parameter larger than one"); 
+    sys.exit(1) 
+  # warning if deBruijn graph construction is used   
+  if args.deB > 0 or args.trlcp > 0:
+    print("!! Warning: options --deB/--trlcp k only consider the leading k symbols".format(args.deB))
+    print("!!          of each suffix: the resulting BWT is not the standard one")
+
+# phase1:
+# concatenation or computation of bwts 
+# this version never computes the LCPs: 
+# if required they are computed from scratch in phases 2 and 3
+def phase1(args,logfile, logfile_name):
+  print("--- Phase 1 ---",file=logfile); logfile.flush()
+  if args.bwt:
+    print("==== creating .size file")    
+    with open(args.basename+ ".size","wb") as sizefile:
+      for name in args.input:
+        size = os.path.getsize(name)
+        sizefile.write(struct.pack('<Q',size))
+    print("==== concatenating BWT files")    
+    with open(args.basename + ".bwt","wb") as bwtfile:
+      for name in args.input:
+        with open(name,'rb') as fd:
+          shutil.copyfileobj(fd, bwtfile, 1024*1024*10) # 10 MBs buffer
+    # if da requested we must have partial docs files: we concatenate them in a new .docs file
+    if(args.da): 
+      print("==== creating .docs file")    
+      with open(args.basename+ ".docs","wb") as docsfile:
+        for name in args.input:
+          filename = os.path.splitext(name)[0]+".docs"
+          with open(filename,'rb') as fd:
+            shutil.copyfileobj(fd, docsfile, 1024*1024*10) # 10 MBs buffer
+      # concatenate .da files in a single .da_bl file 
+      print("==== creating .da_bl file")
+      with open(args.basename+".{byts}.da_bl".format(byts=args.dbytes),"wb") as dablfile:
+        for name in args.input:
+          filename = os.path.splitext(name)[0]+".{byts}.da".format(byts=args.dbytes)
+          with open(filename,'rb') as fd:
+            shutil.copyfileobj(fd, dablfile, 1024*1024*10) # 10 MBs buffer
+    return True # everything fine
+  else:        
+    # ---- gSACAK    
+    # We must compute BWTs. Shall we use gsaka or gsaka64?
+    if args.mem//5 < 2020:    # less than 10GB: OK 32 bit 
+      exe = os.path.join(args.egap_dir,gsacak_exe)
+    elif args.mem//9 < 2020:  # less than 18GB: use 32bit with RAM = 10GB
+      args.mem = 2020*5
+      exe = os.path.join(args.egap_dir,gsacak_exe)
+    else:                     # more than 18GB: use 64bit version
+      exe = os.path.join(args.egap_dir,gsacak64_exe)
+    # specify output base name  
+    if len(args.out)==0:  outopt=""
+    else:                 outopt="-o " + args.basename
+    options = "-b"
+    if(args.v):   options += "v"    # increase verbosity level
+    if(args.rev): options += "R"    # reverse string as input 
+    if(args.sa):  options += " -s{byts}".format(byts = args.sbytes)    # output SA (ext: .sa)
+    if(args.da):  options += " -d{byts}".format(byts = args.dbytes)    # output DA (ext: .da)
+    command = "{exe} {opts} -m {mem} {output} {ifile} 0".format(exe=exe, 
+              mem=args.mem, output=outopt, ifile=args.input[0], opts=options)
+    # execute choosen algorithm           
+    print("==== gSACAK\n Command:", command)
+    return execute_command(command,logfile,logfile_name)
+
+
+# phase2: 
+# merging of BWTs and computation of LCP and/or DA/SA arrays
+def phase2(args,logfile, logfile_name):
+  print("--- Phase 2 ---",file=logfile); logfile.flush()
+  bwt_size=os.path.getsize(args.basename + ".bwt")
+  if(bwt_size > args.mem*1024*1024 or args.deB > 0 or args.trlcp>0):
+    # input larger than assigned ram, or dbgraph/truncated LCP: external algorithm 
+    options = "-A128 -g128 -vaE"
+    mode = "external memory"
+  elif 3 * bwt_size >  args.mem*1024*1024:
+    # input fits in ram but not too small: semi-external algorithm
+    options = "-A8 -g8 -vaE"
+    mode = "semi-external memory"
+  else:
+    # input 3 times smaller than assigned ram: internal algorithm 
+    options = "-g256 -vaT"
+    mode = "internal memory"
+  exe = os.path.join(args.egap_dir,gap_exe)
+  if(args.v): options += "v"    # increase verbosity level
+  if(args.lcp or args.trlcp>0): options += "l"  # generate (truncated) lcp
+  if(args.da): options += " -d{byts}".format(byts = args.dbytes)  # output DA (ext: .da)
+  if(args.sa): options += " -S{byts}".format(byts = args.sbytes)  # output SA (ext: .sa)
+  if(args.deB>0): options += " -D{k}".format(k = args.deB)      # info for order-k de Brujin graph
+  if(args.trlcp>0): options += " -D{k}".format(k = args.trlcp)  # info for truncated LCP
+  command = "{exe}{byts} {opts} {ibase}".format(exe=exe, 
+              byts = args.lbytes, opts=options, ibase=args.basename)
+  print("==== gap ({alg})\n Command: {cmd}".format(alg=mode, cmd=command))
+  return execute_command(command,logfile,logfile_name)
+
+
+# phase3: 
+# merging of LCP values
+def phase3(args,logfile, logfile_name):
+  print("--- Phase 3 ---",file=logfile); logfile.flush()
+  exe = os.path.join(args.egap_dir,mergelcp_exe)
+  options = "0"
+  if(args.deB>0): options = "{k}".format(k = args.deB)      # info for order-k de Brujin graph
+  if(args.trlcp>0): options = "{k}".format(k = args.trlcp)  # info for truncated LCP
+  command = "{exe} -s 256 -t -v -m {mem} -k {opts} {ibase} {pos} {lcp} ".format(exe=exe, 
+              mem=args.mem, ibase=args.basename, pos=POS_SIZE, lcp=args.lbytes, k=args.deB, opts=options)
+  print("==== mergeLcp\n Command:", command)
+  return execute_command(command,logfile,logfile_name)
+  
+
+# execute command: return True is everything OK, False otherwise
+def execute_command(command,logfile,logfile_name):
+  try:
+    subprocess.check_call(command.split(),stdout=logfile,stderr=logfile)
+  except subprocess.CalledProcessError:
+    print("Error executing command line:")
+    print("\t"+ command)
+    print("Check log file: " + logfile_name)
+    return False
+  return True
+
+def show_command_line(f):
+  f.write("Python command line: ") 
+  for x in sys.argv:
+     f.write(x+" ")
+  f.write("\n")   
+
+if __name__ == '__main__':
+    main()
