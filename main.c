@@ -8,7 +8,7 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
 
 void Wi_sort(char *Wi, int *Wm,  int *colors, int start, int end);
 
-void boss_example();
+// void boss_example(); // do we want to compute boss to a single genome? If we want we need a few ifdef
 
 void colored_boss_example();
 
@@ -32,13 +32,13 @@ int main(int argc, char *argv[]){
     // Computes BWT, LCP and DA from both files
     compute_files(file1, file2, k);
 
-    FILE *mergeBwt = fopen("merge.bwt", "r");
+    FILE *mergeBWT = fopen("merge.bwt", "r");
     FILE *mergeLCP = fopen("merge.lcp", "rb");
     FILE *mergeDA = fopen("merge.da", "rb");    
 
-    fseek(mergeBwt, 0, SEEK_END);
-    int n = ftell(mergeBwt);
-    rewind(mergeBwt);
+    fseek(mergeBWT, 0, SEEK_END);
+    int n = ftell(mergeBWT);
+    rewind(mergeBWT);
 
     /******** Construct BOSS representation ********/
 
@@ -48,10 +48,14 @@ int main(int argc, char *argv[]){
     int C[255];
 
     // Initialize variables
-    BWT = (char*)malloc(n*sizeof(char));
-    fread(BWT, 4, n, mergeBwt);
     memset(C, 0, sizeof(int)*255);
-
+    BWT = (char*)malloc(n*sizeof(char));
+    LCP = (int*)malloc(n*sizeof(int));
+    DA = (int*)malloc(n*sizeof(int));
+    fread(BWT, sizeof(char), n, mergeBWT);
+    // fread(LCP, sizeof(int), n, mergeLCP);
+    // fread(DA, sizeof(int), n, mergeLCP);
+    
     printf("%s\n", BWT);
 
     // boss_construction(LCP, DA, BWT, C, last, Wm, W, n, k);
@@ -72,42 +76,42 @@ void compute_files(char *file1, char *file2, int k){
     system(eGapMerge);
 }
 
-void boss_example() {
-    int n0, n1, k;
-    n0 = 14;
-    n1 = 7;
-    k = 3;
+// void boss_example() {
+//     int n0, n1, k;
+//     n0 = 14;
+//     n1 = 7;
+//     k = 3;
 
-    char BWT_0[n0+1];
-    strcpy(BWT_0, "TTC$CCTATAAA$C");
-    int LCP_0[] = {-1,3,0,2,1,3,0,2,3,1,0,3,1,3};
+//     char BWT_0[n0+1];
+//     strcpy(BWT_0, "TTC$CCTATAAA$C");
+//     int LCP_0[] = {-1,3,0,2,1,3,0,2,3,1,0,3,1,3};
 
-    char BWT_1[n1+1]; 
-    strcpy(BWT_1, "GCTGA$C");
-    int LCP_1[] = {-1,0,0,1,0,1,0};
+//     char BWT_1[n1+1]; 
+//     strcpy(BWT_1, "GCTGA$C");
+//     int LCP_1[] = {-1,0,0,1,0,1,0};
     
-    /*** Construct BOSS representation ***/
+//     /*** Construct BOSS representation ***/
 
-    int *last_0 = (int*)malloc((n0)*sizeof(int*));
-    int *Wm_0 = (int*)malloc((n0)*sizeof(int*));
+//     int *last_0 = (int*)malloc((n0)*sizeof(int*));
+//     int *Wm_0 = (int*)malloc((n0)*sizeof(int*));
 
-    int *last_1 = (int*)malloc((n1)*sizeof(int*));
-    int *Wm_1 = (int*)malloc((n1)*sizeof(int*));
+//     int *last_1 = (int*)malloc((n1)*sizeof(int*));
+//     int *Wm_1 = (int*)malloc((n1)*sizeof(int*));
 
-    // create and initialize C map
-    int C_0[255];
-    memset(C_0, 0, sizeof(int)*255);
-    int C_1[255];
-    memset(C_1, 0, sizeof(int)*255);
+//     // create and initialize C map
+//     int C_0[255];
+//     memset(C_0, 0, sizeof(int)*255);
+//     int C_1[255];
+//     memset(C_1, 0, sizeof(int)*255);
 
-    // create and initizalize W string
-    char *W_0 = (char*)malloc((n0)*sizeof(char*));
-    char *W_1 = (char*)malloc((n1)*sizeof(char*));
+//     // create and initizalize W string
+//     char *W_0 = (char*)malloc((n0)*sizeof(char*));
+//     char *W_1 = (char*)malloc((n1)*sizeof(char*));
 
-    // BOSS construction
-    boss_construction(LCP_0, NULL, BWT_0, C_0, last_0, W_0, Wm_0, NULL, n0, k, 1);
-    boss_construction(LCP_1, NULL, BWT_1, C_1, last_1, W_1, Wm_1, NULL, n1, k, 1);
-}
+//     // BOSS construction
+//     boss_construction(LCP_0, NULL, BWT_0, C_0, last_0, W_0, Wm_0, NULL, n0, k, 1);
+//     boss_construction(LCP_1, NULL, BWT_1, C_1, last_1, W_1, Wm_1, NULL, n1, k, 1);
+// }
 
 void colored_boss_example() {
     int n, k;
