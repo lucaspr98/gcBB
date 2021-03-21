@@ -111,13 +111,13 @@ void boss_example() {
 
 void colored_boss_example() {
     int n, k;
-    n = 21;
+    n = 23;
     k = 3;
 
     char BWT[n+1];
-    strcpy(BWT, "TTGC$CCCTTATGAA$AA$CC");
-    int LCP[] = {-1,3,3,0,2,1,1,3,0,2,2,3,1,4,0,1,0,3,1,3,3};
-    int DA[] = {0,0,1,0,0,1,0,0,0,1,0,0,1,0,1,1,0,0,0,1,0};
+    strcpy(BWT, "TTGC$CCCTTATGAA$AA$CCTT");
+    int LCP[] = {-1,3,3,0,2,1,1,3,0,2,2,3,1,4,0,1,0,3,1,3,3,4,6};
+    int DA[] = {0,0,1,0,0,1,0,0,0,1,0,0,1,0,1,1,0,0,0,1,0,1,0};
     
     /*** Construct BOSS representation ***/
 
@@ -139,31 +139,46 @@ void colored_boss_example() {
 void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
     int i;
     int range = end-start;
-    int Wi_tmp[range];
-    int Wi_aux[255];
+    char Wi_tmp[range];
     int Wm_tmp[range];
-    int Wm_aux[2] = {0,0};
     int colors_tmp[range];
+    int Wi_aux[255];
+    int Wm_aux[255];
+    int repetitive[255];
 
-    memset(Wi_tmp, 0, sizeof(int)*(range));    
+    memset(Wi_tmp, 0, sizeof(char)*(range));    
     memset(Wm_tmp, 0, sizeof(int)*(range)); 
     memset(colors_tmp, 0, sizeof(int)*(range)); 
     memset(Wi_aux, 0, sizeof(int)*255);
+    memset(repetitive, 0, sizeof(int)*255);
+    memset(Wm_aux, 0, sizeof(int)*255);
 
     for(i = start; i < end; i++){
         Wi_aux[Wi[i]]++;
+        Wm_aux[Wi[i]] += Wm[i];
     }
-    
+
+    for(i = start; i < end; i++){
+        if(Wi_aux[Wi[i]] > 1)
+            repetitive[Wi[i]] = 1;
+    }
+
     for(i = 1; i < 255; i++){
         Wi_aux[i] += Wi_aux[i-1];
     }
 
-    Wm_aux[1] += Wm_aux[0];
-
     for(i = start; i < end; i++){
-        Wi_tmp[Wi_aux[Wi[i]-1]] = Wi[i];
-        Wm_tmp[Wi_aux[Wi[i]-1]] = Wm[i];
-        colors_tmp[Wi_aux[Wi[i]-1]] = colors[i];
+        Wi_tmp[Wi_aux[Wi[i]]-1] = Wi[i];
+        
+        if(repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] == 0){
+            Wm_tmp[Wi_aux[Wi[i]]-1] = 1;
+        } else if (repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] > 0){
+            Wm_tmp[Wi_aux[Wi[i]]-1] = 0;
+            Wm_aux[Wi[i]]--;
+        } else {
+            Wm_tmp[Wi_aux[Wi[i]]-1] = Wm[i];
+        }
+        colors_tmp[Wi_aux[Wi[i]]-1] = colors[i];
         Wi_aux[Wi[i]]--;
     }
 
@@ -183,16 +198,18 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
     memset(W_freq, 0, sizeof(int)*255);
     int Wi_freq[255]; // frequency of outgoing edges in a k-mer suffix range (detect same outgoing edge in a vertex)
     memset(Wi_freq, 0,  sizeof(int)*255);
-    int DA_freq[samples]; // frequency of outgoing edges in a k-mer from a string collection (include same outgoing edge from distinct collections)
-    memset(Wi_freq, 0,  sizeof(int)*samples);
+    int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
+    memset(DA_freq, 0,  sizeof(int)*samples*255);
 
     while(bi < n){
         // more than one outgoing edge of vertex i
-        if(LCP[bi+1] >= k){
+        if(LCP[bi+1] >= k && bi != n-1){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
             if(BWT[bi] != '$'){
                 if(Wi_freq[BWT[bi]] == 0){
+                    // Add values to BOSS representation
                     W[i] = BWT[bi];
+                    colors[i] = DA[bi];
                     if(Wi_size == 0){
                         last[i] = 1;
                     } else {
@@ -202,27 +219,36 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
                     if(W_freq[BWT[bi]] == 0){
                         Wm[i] = 1;
                     }
-                    colors[i] = DA[bi];
-                    C[BWT[bi]]++;
-                    W_freq[BWT[bi]]++;
-                    Wi_freq[BWT[bi]]++;
-                    Wi_size++;
-                    DA_freq[DA[bi]]++;
-                    i++; 
-                } 
+                    // Increment variables
+                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                } else {
+                    // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
+                    if(DA_freq[DA[bi]][BWT[bi]] == 0){
+                        W[i] = BWT[bi];
+                        colors[i] = DA[bi];
+                        if(Wi_size == 0){
+                            last[i] = 1;
+                        } else {
+                            last[i-1] = 0;
+                            last[i] = 1;
+                        }
+                        if(W_freq[BWT[bi]] == 0){
+                            Wm[i] = 1;
+                        }
+                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                    }
+                }
             }
         } else {
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
                 W[i] = BWT[bi];
+                colors[i] = DA[bi];
                 last[i] = 1;
                 if(W_freq[BWT[bi]] == 0){
                     Wm[i] = 1;
                 }
-                colors[i] = DA[bi];
-                W_freq[BWT[bi]]++;
-                i++;
-                C[BWT[bi]]++;
+                C[BWT[bi]]++; W_freq[BWT[bi]]++; i++;
             } 
             // last outgoing edge of vertex i
             else {
@@ -231,21 +257,35 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
                     W[i] = BWT[bi];
                     last[i-1] = 0;
                     last[i] = 1;
+                    colors[i] = DA[bi];
                     if(W_freq[BWT[bi]] == 0){
                         Wm[i] = 1;
                     }
-                    colors[i] = DA[bi];
-                    i++;
-                    Wi_size++;
-                    C[BWT[bi]]++;
-                    W_freq[BWT[bi]]++;
+                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_size++; i++;
+                } else {
+                    // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
+                    if(DA_freq[DA[bi]][BWT[bi]] == 0){
+                        W[i] = BWT[bi];
+                        colors[i] = DA[bi];
+                        if(Wi_size == 0){
+                            last[i] = 1;
+                        } else {
+                            last[i-1] = 0;
+                            last[i] = 1;
+                        }
+                        if(W_freq[BWT[bi]] == 0){
+                            Wm[i] = 1;
+                        }
+                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                    }
                 }
                 // sort outgoing edges of vertex i in lexigraphic order
                 if(Wi_size > 1){
                     Wi_sort(W, Wm, colors, i-Wi_size, i);
                 }
+                // clean frequency variables of outgoing edges in Wi 
                 memset(Wi_freq, 0, sizeof(int)*255);   
-                memset(DA_freq, 0,  sizeof(int)*samples);
+                memset(DA_freq, 0, sizeof(int)*samples*255);
             }
             // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
             if(LCP[bi+1] < k-1){
@@ -274,7 +314,6 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
 
     printf("BOSS:\nlast\tW\tW-\tcolor\n");
     for(j = 0; j < i; j++){
-        printf("%d\t%c\t%d\t%d\n", last[j], W[j], Wm[j], colors[j]);
+        printf("%d\t\t%c\t%d\t%d\n", last[j], W[j], Wm[j], colors[j]);
     }
-    printf("\n");
 };
