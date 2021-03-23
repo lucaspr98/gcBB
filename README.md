@@ -2,8 +2,15 @@
 
 ## Install
 ```sh
-git clone https://github.com/lucaspr98/gcBB
+git clone https://github.com/lucaspr98/gcBB --recursive
 cd gcBB
+```
+
+## Pre-requisites
+```sh
+cd egap
+make
+cd ../
 ```
 
 ## Compile
