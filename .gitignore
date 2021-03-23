@@ -9,3 +9,6 @@ egap/
 *.txt
 
 gcBB
+
+readbin.c
+readbin
