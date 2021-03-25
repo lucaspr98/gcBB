@@ -15,8 +15,8 @@ void colored_boss_example();
 int main(int argc, char *argv[]){
     int i;
 
-    colored_boss_example();
-    exit(-1);
+    // colored_boss_example();
+    // exit(-1);
 
     /******** Check arguments and compute external needed files ********/
 
@@ -35,11 +35,18 @@ int main(int argc, char *argv[]){
 
     FILE *mergeBWT = fopen("merge.bwt", "r");
     FILE *mergeLCP = fopen("merge.4.lcp", "rb");
-    FILE *mergeDA = fopen("merge.4.da", "rb");    
+    FILE *mergeDA = fopen("merge.4.da", "rb");
+
+    char docs[128];
+    sprintf(docs, "%s.docs", file1);
+    FILE *mergeDocs = fopen(docs, "rb");    
 
     fseek(mergeBWT, 0, SEEK_END);
     int n = ftell(mergeBWT);
     rewind(mergeBWT);
+
+    int docsSize;
+    fread(&docsSize, 4, 1, mergeDocs);
 
     /******** Construct BOSS representation ********/
 
@@ -56,12 +63,18 @@ int main(int argc, char *argv[]){
     LCP = (int*)malloc(n*sizeof(int));
     DA = (int*)malloc(n*sizeof(int));
 
+    fread(BWT, sizeof(char), n, mergeBWT);
+    fread(LCP, sizeof(int), n, mergeLCP);
+    int buff;
     for(i = 0; i < n; i++){
-        fread(BWT+i, 1, 1, mergeBWT);
+        fread(&buff, 4, 1, mergeDA);
+        if(buff < docsSize)
+            DA[i] = 0; 
+        else
+            DA[i] = 1;
+
         if(BWT[i] == 0)
-            BWT[i] = 1;
-        fread(LCP+i, 4, 1, mergeLCP);
-        fread(DA+i, 4, 1, mergeDA);
+            BWT[i] = '$';
     }
 
     // Initialize BOSS variables
@@ -71,7 +84,7 @@ int main(int argc, char *argv[]){
     colors = (int*)malloc(n*sizeof(int));
     W = (char*)malloc(n*sizeof(char));
 
-    // boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+    boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
 
 }
 
@@ -82,7 +95,7 @@ void compute_files(char *file1, char *file2, int k){
 
     sprintf(eGap1, "egap/eGap --trlcp %d --lbytes 4 --da %s", k, file1);
     sprintf(eGap2, "egap/eGap --trlcp %d --lbytes 4 --da %s", k, file2);
-    sprintf(eGapMerge, "egap/eGap --bwt --trlcp %d --lbytes 4 --da -o merge %s.bwt %s.bwt --da", k, file1, file2);
+    sprintf(eGapMerge, "egap/eGap --bwt --trlcp %d --lbytes 4 --da -o merge %s.bwt %s.bwt", k, file1, file2);
 
     system(eGap1);
     system(eGap2);
@@ -222,7 +235,7 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
         // more than one outgoing edge of vertex i
         if(LCP[bi+1] >= k && bi != n-1){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            if(BWT[bi] != '$' && BWT[bi] != 1){
+            if(BWT[i] != '$'){
                 if(Wi_freq[BWT[bi]] == 0){
                     // Add values to BOSS representation
                     W[i] = BWT[bi];
@@ -257,6 +270,8 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
                 }
             }
         } else {
+            // if(BWT[bi] == 0)
+            //     BWT[bi] = '$';
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
                 W[i] = BWT[bi];
@@ -314,19 +329,18 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
     }
 
     // fix C values
-    if(C['$'] > 0)
-        C[1] = C['$'];
-
+    C[1] = C['$'];
     C[2] = C['A'] + C[1];
     C[3] = C['C'] + C[2];
     C[4] = C['G'] + C[3];
+    C[5] = C['N'] + C[4];
 
     C[0] = 0;
 
-    char alphabet[5] = {'$', 'A', 'C', 'G', 'T'};
+    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     // Print results 
     printf("C array:\n");
-    for(j = 0; j < 5; j++){
+    for(j = 0; j < 6; j++){
         printf("%c %d\n", alphabet[j], C[j]);
     }
     printf("\n");
