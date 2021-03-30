@@ -1,12 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 void compute_files(char *file1, char *file2, int k);
 
 void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
 
 void Wi_sort(char *Wi, int *Wm,  int *colors, int start, int end);
+
+void bwsd(int *DA, int n, double *expectation, double *entropy);
+
+double bwsd_expectation(int *t, int s, int n);
+
+double bwsd_shannon_entropy(int *t, int s, int n);
 
 // void boss_example(); // do we want to compute boss to a single genome? If we want we need a few ifdef
 
@@ -30,7 +37,7 @@ int main(int argc, char *argv[]){
     char *file2 = argv[2];
     int k = atoi(argv[3]);
     
-    // Computes BWT, LCP and DA from both files
+    // // Computes BWT, LCP and DA from both files
     compute_files(file1, file2, k);
 
     FILE *mergeBWT = fopen("merge.bwt", "r");
@@ -48,7 +55,7 @@ int main(int argc, char *argv[]){
     int docsSize;
     fread(&docsSize, 4, 1, mergeDocs);
 
-    /******** Construct BOSS representation ********/
+    // /******** Construct BOSS representation ********/
 
     // Declare needed variables
     char *BWT;
@@ -85,6 +92,11 @@ int main(int argc, char *argv[]){
     W = (char*)malloc(n*sizeof(char));
 
     boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+
+    // BWSD
+    double expectation, entropy;
+
+    bwsd(DA, n, &expectation, &entropy);
 
 }
 
@@ -350,3 +362,73 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
         printf("%d\t\t%c\t%d\t%d\n", last[j], W[j], Wm[j], colors[j]);
     }
 };
+
+double bwsd_expectation(int *t, int s, int n){
+    int i;
+	double value = 0.0;
+    double frac;
+
+	
+	for(i = 1; i < n; i++){
+        if(t[i] != 0){
+            frac = (double)t[i]/s;
+            value += i*frac;
+        }
+    }
+
+    return value-1;
+}
+
+double bwsd_shannon_entropy(int *t, int s, int n){
+    int i;
+	double value = 0.0;
+	
+    for(i = 1; i < n; i++){
+        if(t[i] != 0){
+            double frac = (double)t[i]/s;
+            value += frac*log2(frac);
+        }
+    }
+
+    return value*(-1);
+
+}
+
+void bwsd(int *DA, int n, double *expectation, double *entropy){
+    int i;
+
+    int *run_length = (int*)malloc((n+6)*sizeof(int));
+    int current = 0;
+    run_length[0] = 0;
+    run_length[1] = 0;
+    int pos = 1;
+    for(i = 0; i < n; i++){
+        if(DA[i] == current)
+            run_length[pos]++;
+        else {
+            current = DA[i];
+            run_length[pos+1]=current;
+            run_length[pos+2]=1;
+            pos += 2;
+        }
+    }
+    if(run_length[pos-1] == 0){
+        pos+= 2;
+        run_length[pos-1] = 1;
+        run_length[pos] = 0;
+    }
+    pos++; //size of run_lentgh
+
+    int t[n];
+    memset(t, 0, (n)*sizeof(int));
+    for(i = 0; i < pos; i+=2){
+        t[run_length[i+1]]++;
+    }
+
+    *expectation = bwsd_expectation(t, pos/2, n);
+    *entropy = bwsd_shannon_entropy(t, pos/2, n);
+
+    printf("BWSD:\n");
+    printf("Expectation: %.5lf\nShannons Entropy: %.5lf\n", *expectation, *entropy);
+}
+
