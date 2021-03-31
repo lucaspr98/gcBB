@@ -72,14 +72,9 @@ int main(int argc, char *argv[]){
 
     fread(BWT, sizeof(char), n, mergeBWT);
     fread(LCP, sizeof(int), n, mergeLCP);
+    fread(DA, sizeof(int), n, mergeDA);
     int buff;
     for(i = 0; i < n; i++){
-        fread(&buff, 4, 1, mergeDA);
-        if(buff < docsSize)
-            DA[i] = 0; 
-        else
-            DA[i] = 1;
-
         if(BWT[i] == 0)
             BWT[i] = '$';
     }
@@ -367,8 +362,7 @@ double bwsd_expectation(int *t, int s, int n){
     int i;
 	double value = 0.0;
     double frac;
-
-	
+    
 	for(i = 1; i < n; i++){
         if(t[i] != 0){
             frac = (double)t[i]/s;
