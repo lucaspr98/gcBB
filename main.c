@@ -84,17 +84,17 @@ int main(int argc, char *argv[]){
     colors = (int*)malloc(n*sizeof(int));
     W = (char*)malloc(n*sizeof(char));
 
-    for(i = 0; i < n; i++)
-        printf("%c, ", BWT[i]);
-    printf("\n");
+    // for(i = 0; i < n; i++)
+    //     printf("%c, ", BWT[i]);
+    // printf("\n");
 
-    for(i = 0; i < n; i++)
-        printf("%d, ", LCP[i]);
-    printf("\n");
+    // for(i = 0; i < n; i++)
+    //     printf("%d, ", LCP[i]);
+    // printf("\n");
 
-    for(i = 0; i < n; i++)
-        printf("%d, ", DA[i]);
-    printf("\n");
+    // for(i = 0; i < n; i++)
+    //     printf("%d, ", DA[i]);
+    // printf("\n");
 
     boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
 
@@ -371,7 +371,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 void bwsd(int *DA, int n, double *expectation, double *entropy){
     int i;
 
-    int *run_length = (int*)malloc((n+6)*sizeof(int));
+    int *run_length = (int*)malloc((n+10)*sizeof(int));
     int current = 0;
     run_length[0] = 0;
     run_length[1] = 0;
@@ -393,8 +393,8 @@ void bwsd(int *DA, int n, double *expectation, double *entropy){
     }
     pos++; //size of run_lentgh
 
-    int t[n];
-    memset(t, 0, (n)*sizeof(int));
+    int *t = (int*)malloc(n*sizeof(int));
+    memset(t, 0, (n+10)*sizeof(int));
     for(i = 0; i < pos; i+=2){
         t[run_length[i+1]]++;
     }
