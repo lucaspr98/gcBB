@@ -1,6 +1,3 @@
 [submodule "egap"]
 	path = egap
 	url = https://github.com/lucaspr98/egap
-[submodule "gsufsort"]
-	path = gsufsort
-	url = https://github.com/lucaspr98/gsufsort
