@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
+#include <dirent.h>
 
-void compute_files(char *file1, char *file2, int k);
+void compute_file(char *path, char *file, int k);
 
-void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
+void compute_merge_files(char *path, char *file1, char *file2, int id1, int id2, int k);
+
+int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
 
 void Wi_sort(char *Wi, int *Wm,  int *colors, int start, int end);
 
@@ -15,90 +19,207 @@ double bwsd_expectation(int *t, int s, int n);
 
 double bwsd_shannon_entropy(int *t, int s, int n);
 
+void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors);
+
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n);
+
 int main(int argc, char *argv[]){
-    int i;
+    int i, j, m;
+    char **files = (char**)malloc(20*sizeof(char*));
+    int k;
+    int files_n = 0;
+    char *path;
+    int path_len;
 
-    /******** Check arguments and compute external needed files ********/
+    /******** Check arguments ********/
 
-    // Check arguments
-    if (argc < 4) {
-        printf("Missing argument!\nusage: ./bgc [file1.fastq] [file2.fastq] [k]\n");
+    if (argc == 3){
+        DIR *folder;
+        struct dirent *entry;
+        int len;
+        path_len = strlen(argv[1]);
+        path = (char*)malloc(path_len*sizeof(char));
+        strcpy(path, argv[1]);
+
+        folder = opendir(argv[1]);
+        if(folder == NULL){
+            perror("Unable to read directory");
+        }
+        while((entry=readdir(folder))){
+            char *isfastq = strstr(entry->d_name, ".fastq");
+            if(isfastq && strlen(isfastq) == 6){
+                len = strlen(entry->d_name)+1;
+                files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
+
+                // char id = (files_n+1);
+                // files[files_n][0] = '0'+id;
+                strcpy(files[files_n], entry->d_name);
+                files_n++;
+            }
+        }
+
+        closedir(folder);
+
+        k = atoi(argv[2]);
+    } else if (argc == 5){
+        int file_len;
+        path_len = strlen(argv[1]);
+        path = (char*)malloc(path_len*sizeof(char));
+        strcpy(path, argv[1]);
+
+        file_len = strlen(argv[2]);
+        files[0] = (char*)malloc((file_len+1)*sizeof(char));
+        file_len = strlen(argv[3]);
+        files[1] = (char*)malloc((file_len+1)*sizeof(char));
+
+        strcpy(files[0], argv[2]);
+        strcpy(files[1], argv[3]);
+        
+        files_n = 2;
+
+        k = atoi(argv[4]);
+    } else {
+        printf("Missing arguments!\n\n");
+        printf("To compute distance of all fastq files from a directory use command:\n");
+        printf("./gcBB <path_to_dir> <k>\n\n");
+        printf("To compute distance of two fastq files use command:\n");
+        printf("./gcBB <path_to_dir> <file1.fastq> <file2.fastq> <k>\n\n");
         exit(-1);
-    }
+    }    
 
-    char *file1 = argv[1];
-    char *file2 = argv[2];
-    int k = atoi(argv[3]);
-    
+    system("mkdir tmp");
+    system("mkdir results");
+
+    /******** Compute external needed files ********/
+
     // Computes SA, BWT, LCP and DA from both files
-    compute_files(file1, file2, k);
-
-    FILE *mergeBWT = fopen("merge.bwt", "r");
-    FILE *mergeLCP = fopen("merge.4.lcp", "rb");
-    FILE *mergeDA = fopen("merge.4.da", "rb");
-
-    char docs[128];
-    sprintf(docs, "%s.docs", file1);
-    FILE *mergeDocs = fopen(docs, "rb");    
-
-    fseek(mergeBWT, 0, SEEK_END);
-    int n = ftell(mergeBWT);
-    rewind(mergeBWT);
-
-    int docsSize;
-    fread(&docsSize, 4, 1, mergeDocs);
-
-    // /******** Construct BOSS representation ********/
-
-    // Declare needed variables
-    char *BWT;
-    int *LCP, *DA;
-    int *last, *Wm, *colors;
-    char *W;
-    int C[255];
-    int samples = 2;
-
-    // Initialize variables needed to construct BOSS
-    BWT = (char*)malloc(n*sizeof(char));
-    LCP = (int*)malloc(n*sizeof(int));
-    DA = (int*)malloc(n*sizeof(int));
-
-    fread(BWT, sizeof(char), n, mergeBWT);
-    fread(LCP, sizeof(int), n, mergeLCP);
-    fread(DA, sizeof(int), n, mergeDA);
-    int buff;
-    for(i = 0; i < n; i++){
-        if(BWT[i] == 0)
-            BWT[i] = '$';
+    for(i = 0; i < files_n; i++){
+        compute_file(path, files[i], k);
+    }
+    
+    // Computes merge of files
+    for(i = 0; i < files_n; i++){
+        for(j = i+1; j < files_n; j++){
+            compute_merge_files(path, files[i], files[j], i+1, j+1, k);
+        }
     }
 
-    // Initialize BOSS variables
-    memset(C, 0, sizeof(int)*255);
-    last = (int*)malloc(n*sizeof(int));
-    Wm = (int*)malloc(n*sizeof(int));
-    colors = (int*)malloc(n*sizeof(int));
-    W = (char*)malloc(n*sizeof(char));
+    // Similarity matrix based on expectation
+    double **Dm = (double**)malloc(files_n*sizeof(double*));
+    for(i = 0; i < files_n; i++)
+        Dm[i] = (double*)malloc(files_n*sizeof(double));
 
-    boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+    // Similarity matrix based on shannons entropy
+    double **De = (double**)malloc(files_n*sizeof(double*));
+    for(i = 0; i < files_n; i++)
+        De[i] = (double*)malloc(files_n*sizeof(double));
 
-    // BWSD
-    double expectation, entropy;
+    // Initialize matrixes
+    for(i = 0; i < files_n; i++){
+        for(j = 0; j < files_n; j++){
+            Dm[i][j] = 0;
+            De[i][j] = 0;
+        }
+    }
 
-    bwsd(DA, n, &expectation, &entropy);
+    for(i = 0; i < files_n; i++){
+        for(j = 0; j < files_n; j++){
+            if(j > i){
+                char mergeBWTFile[32];
+                char mergeLCPFile[32];
+                char mergeDAFile[32];
 
+                sprintf(mergeBWTFile, "tmp/merge.%d-%d.bwt", i+1, j+1);
+                sprintf(mergeLCPFile, "tmp/merge.%d-%d.4.lcp", i+1, j+1);
+                sprintf(mergeDAFile, "tmp/merge.%d-%d.4.da", i+1, j+1);
+
+                FILE *mergeBWT = fopen(mergeBWTFile, "r");
+                FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+                FILE *mergeDA = fopen(mergeDAFile, "rb");
+
+                fseek(mergeBWT, 0, SEEK_END);
+                int n = ftell(mergeBWT);
+                rewind(mergeBWT);
+
+                /******** Construct BOSS representation ********/
+
+                // BOSS construction needed variables
+                char *BWT;
+                int *LCP, *DA;
+                int *last, *Wm, *colors;
+                char *W;
+                int C[255];
+                int samples = 2;
+
+                // Initialize variables needed to construct BOSS
+                BWT = (char*)malloc(n*sizeof(char));
+                LCP = (int*)malloc(n*sizeof(int));
+                DA = (int*)malloc(n*sizeof(int));
+
+                fread(BWT, sizeof(char), n, mergeBWT);
+                fread(LCP, sizeof(int), n, mergeLCP);
+                fread(DA, sizeof(int), n, mergeDA);
+                int buff;
+                for(m = 0; m < n; m++){
+                    if(BWT[m] == 0)
+                        BWT[m] = '$';
+                    else
+                        BWT[m] = toupper(BWT[m]);
+                }
+
+                fclose(mergeBWT);
+                fclose(mergeLCP);
+                fclose(mergeDA);
+
+                // Initialize BOSS variables
+                memset(C, 0, sizeof(int)*255);
+                last = (int*)malloc(n*sizeof(int));
+                Wm = (int*)malloc(n*sizeof(int));
+                colors = (int*)malloc(n*sizeof(int));
+                W = (char*)malloc(n*sizeof(char));
+
+                int boss_len = boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+
+                // Print BOSS result
+                print_boss_result(boss_len, i+1, j+1, files[i], files[j], C, last, W, Wm, colors);
+                
+                free(LCP);free(BWT);free(last);free(W);free(Wm);free(colors);
+
+                /******** Compute BWSD ********/
+                double expectation, entropy;
+
+                bwsd(DA, n, &expectation, &entropy);
+        
+                Dm[i][j] = expectation;
+                De[i][j] = entropy;
+
+                free(DA);
+            } else if (j == i){
+                Dm[i][j] = 1;
+                De[i][j] = 1;
+            }
+        }
+    }    
+
+    // Print BWSD results
+    print_bwsd_matrixes(Dm, De, files, files_n);
+
+    system("rm -rf tmp");
 }
 
-void compute_files(char *file1, char *file2, int k){
-    char eGap1[128];
-    char eGap2[128];
-    char eGapMerge[128];
+void compute_file(char *path, char *file, int k){
+    char eGap[256];
 
-    sprintf(eGap1, "egap/eGap -m 4096 --trlcp %d --rev --lbytes 4 --da %s", k,  file1);
-    sprintf(eGap2, "egap/eGap -m 4096 --trlcp %d --rev --lbytes 4 --da %s", k, file2);
-    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o merge %s.bwt %s.bwt", k, file1, file2);
+    sprintf(eGap, "egap/eGap -m 4096 %s%s -o tmp/%s --trlcp %d --rev --lbytes 4 --da", path, file, file, k);
+    
+    system(eGap);
+}
 
-    system(eGap1);
-    system(eGap2);
+void compute_merge_files(char *path, char *file1, char *file2, int id1, int id2, int k){
+    char eGapMerge[256];
+
+    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o tmp/merge.%d-%d tmp/%s.bwt tmp/%s.bwt", k, id1, id2, file1, file2);
+    
     system(eGapMerge);
 }
 
@@ -155,7 +276,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
     }
 }
 
-void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
+int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
     int bi = 0; // iterates through BWT and LCP
@@ -206,8 +327,6 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
                 }
             }
         } else {
-            // if(BWT[bi] == 0)
-            //     BWT[bi] = '$';
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
                 W[i] = BWT[bi];
@@ -270,22 +389,32 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
     C[3] = C['C'] + C[2];
     C[4] = C['G'] + C[3];
     C[5] = C['N'] + C[4];
-
     C[0] = 0;
 
-    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    // Print results 
-    printf("C array:\n");
-    for(j = 0; j < 6; j++){
-        printf("%c %d\n", alphabet[j], C[j]);
-    }
-    printf("\n");
-
-    printf("BOSS:\nlast\tW\tW-\tcolor\n");
-
-    for(j = 0; j < i; j++)
-        printf("%d\t\t%c\t%d\t%d\n", last[j], W[j], Wm[j], colors[j]);
+    return i;
 };
+
+void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors){
+    int i;
+    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
+    char boss_result[64];
+    
+    sprintf(boss_result, "results/%d-%d.boss", id1, id2);
+    
+    FILE *boss_file = fopen(boss_result, "w");
+                
+    fprintf(boss_file, "Boss construction of %s and %s genomes merge:\n", file1, file2);
+    fprintf(boss_file, "C array:\n");
+    for(i = 0; i < 6; i++)
+        fprintf(boss_file, "%c %d\n", alphabet[i], C[i]);
+    fprintf(boss_file, "\n");
+    
+    fprintf(boss_file, "BOSS:\nlast\tW\tW-\tcolor\n");
+    for(i = 0; i < boss_len; i++)
+        fprintf(boss_file, "%d\t\t%c\t%d\t%d\n", last[i], W[i], Wm[i], colors[i]);
+
+    fclose(boss_file);
+}
 
 double bwsd_expectation(int *t, int s, int n){
     int i;
@@ -343,14 +472,58 @@ void bwsd(int *DA, int n, double *expectation, double *entropy){
     pos++; //size of run_lentgh
 
     int *t = (int*)malloc(n*sizeof(int));
-    memset(t, 0, (n+10)*sizeof(int));
+    memset(t, 0, n*sizeof(int));
     for(i = 0; i < pos; i+=2){
         t[run_length[i+1]]++;
     }
 
     *expectation = bwsd_expectation(t, pos/2, n);
     *entropy = bwsd_shannon_entropy(t, pos/2, n);
+}
 
-    printf("BWSD:\n");
-    printf("Expectation: %.5lf\nShannons Entropy: %.5lf\n", *expectation, *entropy);
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){
+    int i,j;
+    FILE *bwsd_matrixes = fopen("results/bwsd_matrixes.txt", "w");
+    fprintf(bwsd_matrixes, "Expectation matrix (D_m):\n");
+
+    fprintf(bwsd_matrixes, "\t");
+    for(i = 0; i < files_n; i++)
+        fprintf(bwsd_matrixes, "%10d\t", i+1);
+    fprintf(bwsd_matrixes, "\n");
+
+    for(i = 0; i < files_n; i++){
+        fprintf(bwsd_matrixes, "%d\t", i+1);
+        for(j = 0; j < files_n; j++){
+            if(j >= i)
+                fprintf(bwsd_matrixes, "%10.5lf\t", Dm[i][j]);
+            else
+                fprintf(bwsd_matrixes, "%10.5lf\t", Dm[j][i]);
+        }
+        fprintf(bwsd_matrixes, "\n");
+    }
+    fprintf(bwsd_matrixes, "\n\n");
+
+    fprintf(bwsd_matrixes, "Shannon's entropy matrix (D_e):\n");
+
+    fprintf(bwsd_matrixes, "\t");
+    for(i = 0; i < files_n; i++)
+        fprintf(bwsd_matrixes, "%10d\t", i+1);
+    fprintf(bwsd_matrixes, "\n");
+
+    for(i = 0; i < files_n; i++){
+        fprintf(bwsd_matrixes, "%d\t", i+1);
+        for(j = 0; j < files_n; j++){
+            if(j >= i)
+                fprintf(bwsd_matrixes, "%10.5lf\t", De[i][j]);
+            else
+                fprintf(bwsd_matrixes, "%10.5lf\t", De[j][i]);
+        }
+        fprintf(bwsd_matrixes, "\n");
+    }
+    
+    fprintf(bwsd_matrixes, "\n\n");
+    fprintf(bwsd_matrixes, "Matrix info:\n");
+    for(i = 0; i < files_n; i++)
+        fprintf(bwsd_matrixes, "%d: %s\n", i+1, files[i]);
+    fclose(bwsd_matrixes);
 }

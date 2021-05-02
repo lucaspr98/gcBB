@@ -1,5 +1,3 @@
-
-
 *.o
 *.lcp
 *.bwt
@@ -12,3 +10,7 @@ gcBB
 
 readbin.c
 readbin
+
+tmp/
+results/
+validation/
