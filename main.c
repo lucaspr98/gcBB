@@ -525,5 +525,41 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){
     fprintf(bwsd_matrixes, "Matrix info:\n");
     for(i = 0; i < files_n; i++)
         fprintf(bwsd_matrixes, "%d: %s\n", i+1, files[i]);
+
+    fprintf(bwsd_matrixes, "\n\n");
+    fprintf(bwsd_matrixes, "CSV similarity matrix:\n");
+
+    for(i = 0; i < files_n; i++)
+        fprintf(bwsd_matrixes, ",%s",files[i]);
+    fprintf(bwsd_matrixes, "\n");
+    for(i = 0; i < files_n; i++){
+        fprintf(bwsd_matrixes, "%s,", files[i]);
+        for(j = 0; j < files_n; j++){
+            if(j >= i)
+                fprintf(bwsd_matrixes, "%lf,", Dm[i][j]);
+            else
+                fprintf(bwsd_matrixes, "%lf,", Dm[j][i]);
+        }
+        fprintf(bwsd_matrixes, "\n");
+    }
+    
+    fprintf(bwsd_matrixes, "\n\n");
+    fprintf(bwsd_matrixes, "CSV distance matrix:\n");
+
+    for(i = 0; i < files_n; i++)
+        fprintf(bwsd_matrixes, ",%s",files[i]);
+    fprintf(bwsd_matrixes, "\n");
+    for(i = 0; i < files_n; i++){
+        fprintf(bwsd_matrixes, "%s,", files[i]);
+        for(j = 0; j < files_n; j++){
+            if(j >= i)
+                fprintf(bwsd_matrixes, "%lf,", De[i][j]);
+            else
+                fprintf(bwsd_matrixes, "%lf,", De[j][i]);
+        }
+        fprintf(bwsd_matrixes, "\n");
+    }
+    
+
     fclose(bwsd_matrixes);
 }
