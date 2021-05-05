@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
                 int *LCP, *DA;
                 int *last, *Wm, *colors;
                 char *W;
-                int C[255];
+                int C[255] = {0};
                 int samples = 2;
 
                 // Initialize variables needed to construct BOSS
@@ -159,7 +159,6 @@ int main(int argc, char *argv[]){
                 fread(BWT, sizeof(char), n, mergeBWT);
                 fread(LCP, sizeof(int), n, mergeLCP);
                 fread(DA, sizeof(int), n, mergeDA);
-                int buff;
                 for(m = 0; m < n; m++){
                     if(BWT[m] == 0)
                         BWT[m] = '$';
@@ -172,7 +171,7 @@ int main(int argc, char *argv[]){
                 fclose(mergeDA);
 
                 // Initialize BOSS variables
-                memset(C, 0, sizeof(int)*255);
+                // memset(C, 0, sizeof(int)*255);
                 last = (int*)malloc(n*sizeof(int));
                 Wm = (int*)malloc(n*sizeof(int));
                 colors = (int*)malloc(n*sizeof(int));
@@ -187,8 +186,9 @@ int main(int argc, char *argv[]){
 
                 /******** Compute BWSD ********/
                 double expectation, entropy;
+                expectation = entropy = 0;
 
-                bwsd(DA, n, &expectation, &entropy);
+                bwsd(DA, boss_len, &expectation, &entropy);
         
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
@@ -437,7 +437,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 	
     for(i = 1; i < n; i++){
         if(t[i] != 0){
-            double frac = (double)t[i]/s;
+            double frac = (double)t[i]/(double)s;
             value += frac*log2(frac);
         }
     }
@@ -449,7 +449,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 void bwsd(int *DA, int n, double *expectation, double *entropy){
     int i;
 
-    int *run_length = (int*)malloc((n+10)*sizeof(int));
+    int *run_length = (int*)malloc((n*2)*sizeof(int));
     int current = 0;
     run_length[0] = 0;
     run_length[1] = 0;
