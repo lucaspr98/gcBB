@@ -23,7 +23,7 @@ The eGap repository comes within clone with flag `--recursive`
 
 ## Compile
 ```sh
-gcc main.c -o gcBB
+make all
 ```
 
 ## Run

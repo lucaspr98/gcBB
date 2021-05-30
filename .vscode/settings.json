@@ -4,6 +4,9 @@
         "string_view": "c",
         "initializer_list": "c",
         "ranges": "c",
-        "utility": "c"
+        "utility": "c",
+        "math.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c"
     }
 }
