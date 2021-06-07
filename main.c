@@ -21,7 +21,7 @@ int main(int argc, char *argv[]){
     int path_len;
 
     /******** Check arguments ********/
-
+    
     if (argc == 3){
         DIR *folder;
         struct dirent *entry;
@@ -140,6 +140,13 @@ int main(int argc, char *argv[]){
                 int C[255] = {0};
                 int samples = 2;
 
+                // Coverage information variables
+                int total_coverage = 0;
+                int *reduced_LCP, *coverage;
+
+                reduced_LCP = (int*)malloc(n*sizeof(int));
+                coverage = (int*)malloc(n*sizeof(int));
+
                 // Initialize variables needed to construct BOSS
                 BWT = (char*)malloc(n*sizeof(char));
                 LCP = (int*)malloc(n*sizeof(int));
@@ -153,6 +160,8 @@ int main(int argc, char *argv[]){
                         BWT[m] = '$';
                     else
                         BWT[m] = toupper(BWT[m]);
+
+                    coverage[m] = 1;
                 }
 
                 fclose(mergeBWT);
@@ -160,16 +169,15 @@ int main(int argc, char *argv[]){
                 fclose(mergeDA);
 
                 // Initialize BOSS variables
-                // memset(C, 0, sizeof(int)*255);
                 last = (int*)malloc(n*sizeof(int));
                 Wm = (int*)malloc(n*sizeof(int));
                 colors = (int*)malloc(n*sizeof(int));
                 W = (char*)malloc(n*sizeof(char));
 
-                int boss_len = boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+                int boss_len = boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage);
 
                 // Print BOSS result
-                print_boss_result(boss_len, i+1, j+1, files[i], files[j], C, last, W, Wm, colors);
+                print_boss_result(boss_len, i+1, j+1, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
                 
                 free(LCP);free(BWT);free(last);free(W);free(Wm);free(colors);
 
@@ -177,15 +185,15 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(DA, boss_len, &expectation, &entropy);
+                bwsd(DA, reduced_LCP, coverage, boss_len, k, &expectation, &entropy);
         
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
 
                 free(DA);
             } else if (j == i){
-                Dm[i][j] = 1;
-                De[i][j] = 1;
+                Dm[i][j] = 0;
+                De[i][j] = 0;
             }
         }
     }    
@@ -199,7 +207,7 @@ int main(int argc, char *argv[]){
 void compute_file(char *path, char *file, int k){
     char eGap[256];
 
-    sprintf(eGap, "egap/eGap -m 4096 %s%s -o tmp/%s --trlcp %d --rev --lbytes 4 --da", path, file, file, k);
+    sprintf(eGap, "egap/eGap -m 4096 %s%s -o tmp/%s --trlcp %d --rev --lbytes 4 --da", path, file, file, k+1);
     
     system(eGap);
 }
@@ -207,7 +215,7 @@ void compute_file(char *path, char *file, int k){
 void compute_merge_files(char *path, char *file1, char *file2, int id1, int id2, int k){
     char eGapMerge[256];
 
-    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o tmp/merge.%d-%d tmp/%s.bwt tmp/%s.bwt", k, id1, id2, file1, file2);
+    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o tmp/merge.%d-%d tmp/%s.bwt tmp/%s.bwt", k+1, id1, id2, file1, file2);
     
     system(eGapMerge);
 }

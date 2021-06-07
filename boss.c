@@ -3,12 +3,13 @@
 #include <string.h>
 #include "boss.h"
 
-void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
+void Wi_sort(char *Wi, int *Wm, int *colors, int *coverage, int start, int end){
     int i;
     int range = end-start;
     char Wi_tmp[range];
     int Wm_tmp[range];
     int colors_tmp[range];
+    int coverage_tmp[range];
     int Wi_aux[255];
     int Wm_aux[255];
     int repetitive[255];
@@ -16,6 +17,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
     memset(Wi_tmp, 0, sizeof(char)*(range));    
     memset(Wm_tmp, 0, sizeof(int)*(range)); 
     memset(colors_tmp, 0, sizeof(int)*(range)); 
+    memset(coverage_tmp, 0, sizeof(int)*(range)); 
     memset(Wi_aux, 0, sizeof(int)*255);
     memset(repetitive, 0, sizeof(int)*255);
     memset(Wm_aux, 0, sizeof(int)*255);
@@ -46,6 +48,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
             Wm_tmp[Wi_aux[Wi[i]]-1] = Wm[i];
         }
         colors_tmp[Wi_aux[Wi[i]]-1] = colors[i];
+        coverage_tmp[Wi_aux[Wi[i]]-1] = coverage[i];
         Wi_aux[Wi[i]]--;
     }
 
@@ -53,17 +56,18 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
         Wi[i] = Wi_tmp[i-start];
         Wm[i] = Wm_tmp[i-start];
         colors[i] = colors_tmp[i-start];
+        coverage[i] = coverage_tmp[i-start];
     }
 }
 
-int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
+int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, int *reduced_LCP, int *coverage, int *total_coverage){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
     int bi = 0; // iterates through BWT and LCP
     int Wi_size = 0; 
-    int W_freq[255]; // frequency of outgoing edges in a (k-1)-mer suffix range (detect W- = 1)
+    int W_freq[255]; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
     memset(W_freq, 0, sizeof(int)*255);
-    int Wi_freq[255]; // frequency of outgoing edges in a k-mer suffix range (detect same outgoing edge in a vertex)
+    int Wi_freq[255]; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
     memset(Wi_freq, 0,  sizeof(int)*255);
     int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
     memset(DA_freq, 0,  sizeof(int)*samples*255);
@@ -77,6 +81,7 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                     // Add values to BOSS representation
                     W[i] = BWT[bi];
                     colors[i] = DA[bi];
+                    reduced_LCP[i] = LCP[bi];
                     if(Wi_size == 0){
                         last[i] = 1;
                     } else {
@@ -87,12 +92,14 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                         Wm[i] = 1;
                     }
                     // Increment variables
-                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;
+                    (*total_coverage)++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
                     if(DA_freq[DA[bi]][BWT[bi]] == 0){
                         W[i] = BWT[bi];
                         colors[i] = DA[bi];
+                        reduced_LCP[i] = LCP[bi];
                         if(Wi_size == 0){
                             last[i] = 1;
                         } else {
@@ -103,6 +110,14 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                             Wm[i] = 1;
                         }
                         C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                        (*total_coverage)++;
+                    } else {
+                        // finds the node with outgoing edge labeled with BWT[bi] from DA[bi] and increases it coverage information
+                        int existing_pos = bi-1;
+                        while(BWT[existing_pos] != BWT[bi] && DA[existing_pos] != DA[bi])
+                            existing_pos--;
+                        coverage[existing_pos]++;
+                        (*total_coverage)++;
                     }
                 }
             }
@@ -111,11 +126,13 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
             if(Wi_size == 0){
                 W[i] = BWT[bi];
                 colors[i] = DA[bi];
+                reduced_LCP[i] = LCP[bi];
                 last[i] = 1;
                 if(W_freq[BWT[bi]] == 0){
                     Wm[i] = 1;
                 }
                 C[BWT[bi]]++; W_freq[BWT[bi]]++; i++;
+                (*total_coverage)++;
             } 
             // last outgoing edge of vertex i
             else {
@@ -125,15 +142,18 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                     last[i-1] = 0;
                     last[i] = 1;
                     colors[i] = DA[bi];
+                    reduced_LCP[i] = LCP[bi];
                     if(W_freq[BWT[bi]] == 0){
                         Wm[i] = 1;
                     }
                     C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_size++; i++;
+                    (*total_coverage)++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
                     if(DA_freq[DA[bi]][BWT[bi]] == 0){
                         W[i] = BWT[bi];
                         colors[i] = DA[bi];
+                        reduced_LCP[i] = LCP[bi];
                         if(Wi_size == 0){
                             last[i] = 1;
                         } else {
@@ -143,12 +163,20 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                         if(W_freq[BWT[bi]] == 0){
                             Wm[i] = 1;
                         }
-                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
+                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;                     
+                        (*total_coverage)++;
+                    } else {
+                        // finds the node with outgoing edge labeled with BWT[bi] from DA[bi] and increases it coverage information
+                        int existing_pos = bi-1;
+                        while(BWT[existing_pos] != BWT[bi] && DA[existing_pos] != DA[bi])
+                            existing_pos--;
+                        coverage[existing_pos]++;
+                        (*total_coverage)++;
                     }
                 }
                 // sort outgoing edges of vertex i in lexigraphic order
                 if(Wi_size > 1){
-                    Wi_sort(W, Wm, colors, i-Wi_size, i);
+                    Wi_sort(W, Wm, colors, coverage, i-Wi_size, i);
                 }
                 // clean frequency variables of outgoing edges in Wi 
                 memset(Wi_freq, 0, sizeof(int)*255);   
@@ -174,7 +202,7 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
     return i;
 };
 
-void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors){
+void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, int *reduced_LCP, int *coverage, int total_coverage){
     int i;
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char boss_result[64];
@@ -188,10 +216,12 @@ void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2,
     for(i = 0; i < 6; i++)
         fprintf(boss_file, "%c %d\n", alphabet[i], C[i]);
     fprintf(boss_file, "\n");
+
+    fprintf(boss_file, "Total coverage: %d\n\n", total_coverage);
     
-    fprintf(boss_file, "BOSS:\nlast\tW\tW-\tcolor\n");
+    fprintf(boss_file, "BOSS:\nlast\tW\tW-\tcolor\tLCP\tcoverage\n");
     for(i = 0; i < boss_len; i++)
-        fprintf(boss_file, "%d\t\t%c\t%d\t%d\n", last[i], W[i], Wm[i], colors[i]);
+        fprintf(boss_file, "%4d\t%c\t%d\t%5d\t%3d\t%8d\n", last[i], W[i], Wm[i], colors[i], reduced_LCP[i], coverage[i]);
 
     fclose(boss_file);
 }

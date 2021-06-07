@@ -4,6 +4,10 @@
 #include <string.h>
 #include "bwsd.h"
 
+#ifndef COVERAGE
+	#define COVERAGE 0
+#endif
+
 double bwsd_expectation(int *t, int s, int n){
     int i;
 	double value = 0.0;
@@ -34,23 +38,60 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *DA, int n, double *expectation, double *entropy){
+void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy){
     int i;
 
-    int *run_length = (int*)malloc((n*2)*sizeof(int));
+    int *run_length = (int*)malloc((n*3)*sizeof(int));
     int current = 0;
     run_length[0] = 0;
     run_length[1] = 0;
     int pos = 1;
     for(i = 0; i < n; i++){
-        if(DA[i] == current)
-            run_length[pos]++;
-        else {
-            current = DA[i];
-            run_length[pos+1]=current;
-            run_length[pos+2]=1;
-            pos += 2;
+        #if COVERAGE 
+        if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && DA[i] != DA[i+1]){
+            if(coverage[i] >= coverage[i+1]){
+                int repetitions = 0;
+                int flip = DA[i];
+                while(repetitions <= coverage[i+1]){
+                    run_length[pos+1] = flip;
+                    run_length[pos+2] = 1;
+                    pos += 2;
+                    flip = flip == DA[i] ? DA[i+1] : DA[i];
+                    repetitions++;
+                }
+                int remaining = coverage[i] - repetitions;
+                run_length[pos+1] = DA[i];
+                run_length[pos+2] = remaining;
+                pos += 2; 
+            } 
+            else {
+                int repetitions = 0;
+                int flip = DA[i];
+                while(repetitions <= coverage[i]){
+                    run_length[pos+1] = flip;
+                    run_length[pos+2] = 1;
+                    pos += 2;
+                    flip = flip == DA[i] ? DA[i+1] : DA[i];
+                    repetitions++;
+                }
+                int remaining = coverage[i+1] - repetitions;
+                run_length[pos+1] = DA[i+1];
+                run_length[pos+2] = remaining;
+                pos += 2; 
+            }
+        } else { 
+        #endif
+            if(DA[i] == current)
+                run_length[pos]++;
+            else {
+                current = DA[i];
+                run_length[pos+1]=current;
+                run_length[pos+2]=1;
+                pos += 2;
+            }
+        #if COVERAGE
         }
+        #endif
     }
     if(run_length[pos-1] == 0){
         pos+= 2;
@@ -71,7 +112,14 @@ void bwsd(int *DA, int n, double *expectation, double *entropy){
 
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){
     int i,j;
-    FILE *bwsd_matrixes = fopen("results/bwsd_matrixes.txt", "w");
+    FILE *bwsd_matrixes = fopen(
+        #if COVERAGE
+            "results/bwsd_matrixes_coverage_1.txt", 
+        #else
+            "results/bwsd_matrixes_coverage_0.txt", 
+        #endif
+    "w");
+    
     fprintf(bwsd_matrixes, "Expectation matrix (D_m):\n");
 
     fprintf(bwsd_matrixes, "\t");

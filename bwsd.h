@@ -1,5 +1,5 @@
 
-void bwsd(int *DA, int n, double *expectation, double *entropy);
+void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy);
 
 double bwsd_expectation(int *t, int s, int n);
 
