@@ -14,7 +14,7 @@ void compute_merge_files(char *path, char *file1, char *file2, int id1, int id2,
 
 int main(int argc, char *argv[]){
     int i, j, m;
-    char **files = (char**)malloc(20*sizeof(char*));
+    char **files = (char**)malloc(32*sizeof(char*));
     int k;
     int files_n = 0;
     char *path;
@@ -164,6 +164,19 @@ int main(int argc, char *argv[]){
                     coverage[m] = 1;
                 }
 
+                char docsFile[128];
+                sprintf(docsFile, "tmp/%s.docs", files[i]);
+                FILE *docs = fopen(docsFile, "r");
+                size_t docsDivisorValue;
+                fread(&docsDivisorValue, 8, 1, docs);
+
+                for(m = 0; m < n; m++){
+                    if(DA[m] < docsDivisorValue)
+                        DA[m] = 0;
+                    else
+                        DA[m] = 1;
+                }
+
                 fclose(mergeBWT);
                 fclose(mergeLCP);
                 fclose(mergeDA);
@@ -201,13 +214,13 @@ int main(int argc, char *argv[]){
     // Print BWSD results
     print_bwsd_matrixes(Dm, De, files, files_n);
 
-    system("rm -rf tmp");
+    // system("rm -rf tmp");
 }
 
 void compute_file(char *path, char *file, int k){
     char eGap[256];
 
-    sprintf(eGap, "egap/eGap -m 4096 %s%s -o tmp/%s --trlcp %d --rev --lbytes 4 --da", path, file, file, k+1);
+    sprintf(eGap, "egap/eGap %s%s --rev --da --em --lbytes 4 -o tmp/%s", path, file, file);
     
     system(eGap);
 }
@@ -215,7 +228,7 @@ void compute_file(char *path, char *file, int k){
 void compute_merge_files(char *path, char *file1, char *file2, int id1, int id2, int k){
     char eGapMerge[256];
 
-    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o tmp/merge.%d-%d tmp/%s.bwt tmp/%s.bwt", k+1, id1, id2, file1, file2);
+    sprintf(eGapMerge, "egap/eGap --bwt --trlcp %d --da --rev --lbytes 4 tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%d-%d", k+1, file1, file2, id1, id2);
     
     system(eGapMerge);
 }
