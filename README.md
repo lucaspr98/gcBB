@@ -22,8 +22,17 @@ cd ../
 The eGap repository comes within clone with flag `--recursive`
 
 ## Compile
+If you do not want the BWSD to use coverage to weight the comparison, use the command:
 ```sh
-gcc main.c -o gcBB
+make
+```
+or 
+```sh
+make COVERAGE=0
+```
+else, use the command:
+```sh
+make COVERAGE=1
 ```
 
 ## Run
@@ -40,7 +49,7 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ```sh
 ./gcBB dataset/ reads1.fastq reads2.fastq 3
 ```
-In directory results, there will be two files, `1-2.boss` and `bwsd_matrixes.txt`.
+In directory results, there will be two files, `1-2.boss` and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag). 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
@@ -51,4 +60,4 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 ```sh
 ./gcBB influenza_dataset/ 3
 ```
-In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `bwsd_matrixes.txt`.
+In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag).

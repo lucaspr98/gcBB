@@ -10,6 +10,8 @@ gcBB
 
 readbin.c
 readbin
+da.c
+docs.c
 
 nohup.out
 
