@@ -11,6 +11,10 @@ gcBB
 readbin.c
 readbin
 
+nohup.out
+
+erecta-yakuba
+
 tmp/
 results/
 validation/
