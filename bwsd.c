@@ -38,7 +38,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy){
+void bwsd(int *DA, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy){
     int i;
 
     int *run_length = (int*)malloc((n*3)*sizeof(int));

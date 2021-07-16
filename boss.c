@@ -60,7 +60,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int *coverage, int start, int end){
     }
 }
 
-void add_edge(int i, char *W, int **last, int *colors, int *reduced_LCP, int freq, int *Wm, char bwt, int da, short lcp, int Wi_size, int edge_status){
+void add_edge(int i, char *W, int **last, int *colors, short *reduced_LCP, int freq, int *Wm, char bwt, int da, short lcp, int Wi_size, int edge_status){
     *W = bwt;
     *colors = da;
     *reduced_LCP = lcp;
@@ -83,7 +83,7 @@ void add_edge(int i, char *W, int **last, int *colors, int *reduced_LCP, int fre
     }
 }
 
-int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, int *reduced_LCP, int *coverage, int *total_coverage){
+int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
     int bi = 0; // iterates through BWT and LCP
@@ -180,7 +180,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
     return i;
 };
 
-void print_boss_result(int boss_len, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, int *reduced_LCP, int *coverage, int total_coverage){
+void print_boss_result(int boss_len, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, short *reduced_LCP, int *coverage, int total_coverage){
     int i;
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char boss_result[128];
