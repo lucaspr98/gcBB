@@ -207,7 +207,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
 void print_boss_result(int boss_len, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, int *reduced_LCP, int *coverage, int total_coverage){
     int i;
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    char boss_result[64];
+    char boss_result[128];
     
     sprintf(boss_result, "results/%s-%s.boss", file1, file2);
     
