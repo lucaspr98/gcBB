@@ -60,6 +60,29 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int *coverage, int start, int end){
     }
 }
 
+void add_edge(int i, char *W, int **last, int *colors, int *reduced_LCP, int freq, int *Wm, char bwt, int da, short lcp, int Wi_size, int edge_status){
+    *W = bwt;
+    *colors = da;
+    *reduced_LCP = lcp;
+    if(edge_status == 0){
+        if(Wi_size == 0){
+            (*last)[i] = 1;
+        } else {
+            (*last)[i-1] = 0;
+            (*last)[i] = 1;
+        }
+    } else if(edge_status == 1){
+        (*last)[i] = 1;
+    } else if(edge_status == 2){
+        (*last)[i-1] = 0;
+        (*last)[i] = 1;
+    }
+
+    if(freq == 0){
+        *Wm = 1;
+    }
+}
+
 int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, int *reduced_LCP, int *coverage, int *total_coverage){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
@@ -81,18 +104,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
             if(BWT[i] != '$'){
                 if(Wi_freq[BWT[bi]] == 0){
                     // Add values to BOSS representation
-                    W[i] = BWT[bi];
-                    colors[i] = DA[bi];
-                    reduced_LCP[i] = LCP[bi];
-                    if(Wi_size == 0){
-                        last[i] = 1;
-                    } else {
-                        last[i-1] = 0;
-                        last[i] = 1;
-                    }
-                    if(W_freq[BWT[bi]] == 0){
-                        Wm[i] = 1;
-                    }
+                    add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 0);
                     Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                     // Increment variables
                     C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;
@@ -100,18 +112,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
                     if(DA_freq[DA[bi]][BWT[bi]] == 0){
-                        W[i] = BWT[bi];
-                        colors[i] = DA[bi];
-                        reduced_LCP[i] = LCP[bi];
-                        if(Wi_size == 0){
-                            last[i] = 1;
-                        } else {
-                            last[i-1] = 0;
-                            last[i] = 1;
-                        }
-                        if(W_freq[BWT[bi]] == 0){
-                            Wm[i] = 1;
-                        }
+                        add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 0);
                         Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                         C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
                         (*total_coverage)++;
@@ -126,13 +127,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
         } else {
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
-                W[i] = BWT[bi];
-                colors[i] = DA[bi];
-                reduced_LCP[i] = LCP[bi];
-                last[i] = 1;
-                if(W_freq[BWT[bi]] == 0){
-                    Wm[i] = 1;
-                }
+                add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 1);
                 C[BWT[bi]]++; W_freq[BWT[bi]]++; i++;
                 (*total_coverage)++;
             } 
@@ -140,32 +135,13 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
             else {
                 // check if there is already outgoing edge labeled with BWT[bi] leaving vertex i
                 if(Wi_freq[BWT[bi]] == 0){
-                    W[i] = BWT[bi];
-                    last[i-1] = 0;
-                    last[i] = 1;
-                    colors[i] = DA[bi];
-                    reduced_LCP[i] = LCP[bi];
-                    if(W_freq[BWT[bi]] == 0){
-                        Wm[i] = 1;
-                    }
+                    add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 2);
                     C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_size++; i++;
                     (*total_coverage)++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
                     if(DA_freq[DA[bi]][BWT[bi]] == 0){
-                        W[i] = BWT[bi];
-                        colors[i] = DA[bi];
-                        reduced_LCP[i] = LCP[bi];
-                        if(Wi_size == 0){
-                            last[i] = 1;
-                        } else {
-                            last[i-1] = 0;
-                            last[i] = 1;
-                        }
-                        if(W_freq[BWT[bi]] == 0){
-                            Wm[i] = 1;
-                        }
-                        Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
+                        add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 2);
                         C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;                     
                         (*total_coverage)++;
                     } else {

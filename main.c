@@ -109,9 +109,9 @@ int main(int argc, char *argv[]){
     /******** Compute external needed files ********/
 
     // Computes SA, BWT, LCP and DA from both files
-    for(i = 0; i < files_n; i++){
-        compute_file(path, files[i], k);
-    }
+    // for(i = 0; i < files_n; i++){
+    //     compute_file(path, files[i], k);
+    // }
 
     // Remove file format from the string
     for(i = 0; i < files_n; i++){
@@ -123,11 +123,11 @@ int main(int argc, char *argv[]){
     }
     
     // Computes merge of files
-    for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j], k);
-        }
-    }
+    // for(i = 0; i < files_n; i++){
+    //     for(j = i+1; j < files_n; j++){
+    //         compute_merge_files(path, files[i], files[j], k);
+    //     }
+    // }
 
     // Similarity matrix based on expectation
     double **Dm = (double**)malloc(files_n*sizeof(double*));
