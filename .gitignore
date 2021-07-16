@@ -16,3 +16,4 @@ docs.c
 tmp/
 results/
 validation/
+results-aux/

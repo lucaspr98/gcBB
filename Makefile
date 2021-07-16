@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c -std=c99
+CFLAGS = -c -std=gnu99 
 OBJFILES = main.o boss.o bwsd.o
 TARGET = gcBB
 

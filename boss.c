@@ -60,7 +60,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int *coverage, int start, int end){
     }
 }
 
-int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, int *reduced_LCP, int *coverage, int *total_coverage){
+int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, int *reduced_LCP, int *coverage, int *total_coverage){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
     int bi = 0; // iterates through BWT and LCP
@@ -69,6 +69,8 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
     memset(W_freq, 0, sizeof(int)*255);
     int Wi_freq[255]; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
     memset(Wi_freq, 0,  sizeof(int)*255);
+    int Wi_first_occurrence[samples][255]; // first occurence of an outgoing edge in a k-mer suffix range from a string collection
+    memset(Wi_first_occurrence, 0,  sizeof(int)*samples*255);
     int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
     memset(DA_freq, 0,  sizeof(int)*samples*255);
 
@@ -91,6 +93,7 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                     if(W_freq[BWT[bi]] == 0){
                         Wm[i] = 1;
                     }
+                    Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                     // Increment variables
                     C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;
                     (*total_coverage)++;
@@ -109,13 +112,12 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                         if(W_freq[BWT[bi]] == 0){
                             Wm[i] = 1;
                         }
+                        Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                         C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
                         (*total_coverage)++;
                     } else {
-                        // finds the node with outgoing edge labeled with BWT[bi] from DA[bi] and increases it coverage information
-                        int existing_pos = bi-1;
-                        while(BWT[existing_pos] != BWT[bi] && DA[existing_pos] != DA[bi])
-                            existing_pos--;
+                        // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -163,13 +165,12 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                         if(W_freq[BWT[bi]] == 0){
                             Wm[i] = 1;
                         }
+                        Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                         C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++;                     
                         (*total_coverage)++;
                     } else {
-                        // finds the node with outgoing edge labeled with BWT[bi] from DA[bi] and increases it coverage information
-                        int existing_pos = bi-1;
-                        while(BWT[existing_pos] != BWT[bi] && DA[existing_pos] != DA[bi])
-                            existing_pos--;
+                        // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -181,6 +182,7 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
                 // clean frequency variables of outgoing edges in Wi 
                 memset(Wi_freq, 0, sizeof(int)*255);   
                 memset(DA_freq, 0, sizeof(int)*samples*255);
+                memset(Wi_first_occurrence, 0, sizeof(int)*samples*255);
             }
             // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
             if(LCP[bi+1] < k-1){
@@ -202,12 +204,12 @@ int boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, 
     return i;
 };
 
-void print_boss_result(int boss_len, int id1, int id2, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, int *reduced_LCP, int *coverage, int total_coverage){
+void print_boss_result(int boss_len, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, int *reduced_LCP, int *coverage, int total_coverage){
     int i;
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char boss_result[64];
     
-    sprintf(boss_result, "results/%d-%d.boss", id1, id2);
+    sprintf(boss_result, "results/%s-%s.boss", file1, file2);
     
     FILE *boss_file = fopen(boss_result, "w");
                 
