@@ -38,7 +38,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *DA, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy){
+void bwsd(FILE *mergeDA, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, size_t docsSeparator, int mem){
     int i;
 
     int *run_length = (int*)malloc((n*3)*sizeof(int));
@@ -46,6 +46,11 @@ void bwsd(int *DA, short *reduced_LCP, int *coverage, int n, int k, double *expe
     run_length[0] = 0;
     run_length[1] = 0;
     int pos = 1;
+
+    int *DA = (int*)malloc(mem*sizeof(int));
+    fread(DA, sizeof(int), mem, mergeDA);
+    for(i = 0; i < mem; i++) DA[i] = DA[i] < docsSeparator ? 0 : 1;
+
     for(i = 0; i < n; i++){
         #if COVERAGE 
         if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && DA[i] != DA[i+1]){
@@ -108,6 +113,11 @@ void bwsd(int *DA, short *reduced_LCP, int *coverage, int n, int k, double *expe
 
     *expectation = bwsd_expectation(t, pos/2, n);
     *entropy = bwsd_shannon_entropy(t, pos/2, n);
+
+    if(i%mem){
+        fread(DA, sizeof(int), mem, mergeDA);
+        for(i = 0; i < mem; i++) DA[i] = DA[i] < docsSeparator ? 0 : 1;
+    }
 }
 
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){

@@ -83,10 +83,10 @@ void add_edge(int i, char *W, int **last, int *colors, short *reduced_LCP, int f
     }
 }
 
-int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage){
-    int i = 0; // iterates through Wi
-    int j = 0; // auxiliary iterator  
-    int bi = 0; // iterates through BWT and LCP
+int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, size_t docsSeparator, int mem){
+    size_t i = 0; // iterates through Wi
+    int j = 0;
+    size_t bi = 0; // iterates through BWT, LCP and DA
     int Wi_size = 0; 
     int W_freq[255]; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
     memset(W_freq, 0, sizeof(int)*255);
@@ -97,11 +97,28 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
     int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
     memset(DA_freq, 0,  sizeof(int)*samples*255);
 
+    short *LCP = (short*)malloc((mem+1)*sizeof(short));
+    int *DA = (int*)malloc(mem*sizeof(int));
+    char *BWT = (char*)malloc(mem*sizeof(char));
+
+    fread(LCP, sizeof(short), mem+1, mergeLCP);
+    fread(DA, sizeof(int), mem, mergeDA);
+    for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
+    fread(BWT, sizeof(char), mem, mergeBWT);
+    for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
+
+    for(j = 0; j < mem+1; j++) printf("%d ", LCP[j]);
+    printf("\n");
+    for(j = 0; j < mem; j++) printf("%d ", DA[j]);
+    printf("\n");
+    for(j = 0; j < mem; j++) printf("%c ", BWT[j]);
+    printf("\n");
+
     while(bi < n){
         // more than one outgoing edge of vertex i
         if(LCP[bi+1] >= k && bi != n-1){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            if(BWT[i] != '$'){
+            if(BWT[bi] != '$'){
                 if(Wi_freq[BWT[bi]] == 0){
                     // Add values to BOSS representation
                     add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 0);
@@ -118,7 +135,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -146,7 +163,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -165,6 +182,15 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                 memset(W_freq, 0,  sizeof(int)*255);
             }
             Wi_size = 0; 
+        }
+
+        if(bi%mem){
+            // fseek(mergeLCP, bi, SEEK_SET);
+            fread(LCP, sizeof(short), mem+1, mergeLCP);
+            fread(DA, sizeof(int), mem, mergeDA);
+            for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
+            fread(BWT, sizeof(char), mem, mergeBWT);
+            for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
         }
         bi++;
     }

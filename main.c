@@ -163,15 +163,15 @@ int main(int argc, char *argv[]){
                 FILE *mergeDA = fopen(mergeDAFile, "rb");
 
                 fseek(mergeBWT, 0, SEEK_END);
-                int n = ftell(mergeBWT);
+                size_t n = ftell(mergeBWT);
                 rewind(mergeBWT);
 
                 /******** Construct BOSS representation ********/
 
                 // BOSS construction needed variables
-                char *BWT;
-                short *LCP;
-                int *DA;
+                // char *BWT;
+                // short *LCP;
+                // int *DA;
                 int *last, *Wm, *colors;
                 char *W;
                 int C[255] = {0};
@@ -179,44 +179,41 @@ int main(int argc, char *argv[]){
 
                 // Coverage information variables
                 int total_coverage = 0;
-                int *reduced_LCP, *coverage;
+                short *reduced_LCP; 
+                int *coverage;
 
-                reduced_LCP = (int*)malloc(n*sizeof(int));
+                reduced_LCP = (short*)malloc(n*sizeof(short));
                 coverage = (int*)malloc(n*sizeof(int));
 
                 // Initialize variables needed to construct BOSS
-                BWT = (char*)malloc(n*sizeof(char));
-                LCP = (short*)malloc(n*sizeof(short));
-                DA = (int*)malloc(n*sizeof(int));
+                // BWT = (char*)malloc(n*sizeof(char));
+                // LCP = (short*)malloc(n*sizeof(short));
+                // DA = (int*)malloc(n*sizeof(int));
 
-                fread(BWT, sizeof(char), n, mergeBWT);
-                fread(LCP, sizeof(short), n, mergeLCP);
-                fread(DA, sizeof(int), n, mergeDA);
-                for(m = 0; m < n; m++){
-                    if(BWT[m] == 0)
-                        BWT[m] = '$';
-                    else
-                        BWT[m] = toupper(BWT[m]);
+                // fread(BWT, sizeof(char), n, mergeBWT);
+                // fread(LCP, sizeof(short), n, mergeLCP);
+                // fread(DA, sizeof(int), n, mergeDA);
+                // for(m = 0; m < n; m++){
+                //     if(BWT[m] == 0)
+                //         BWT[m] = '$';
+                //     else
+                //         BWT[m] = toupper(BWT[m]);
 
-                    coverage[m] = 1;
-                }
+                //     coverage[m] = 1;
+                // }
 
                 char docsFile[128];
                 sprintf(docsFile, "tmp/%s.docs", files[i]);
                 FILE *docs = fopen(docsFile, "r");
-                size_t docsDivisorValue;
-                fread(&docsDivisorValue, 8, 1, docs);
+                size_t docsSeparator;
+                fread(&docsSeparator, 8, 1, docs);
 
-                for(m = 0; m < n; m++){
-                    if(DA[m] < docsDivisorValue)
-                        DA[m] = 0;
-                    else
-                        DA[m] = 1;
-                }
-
-                fclose(mergeBWT);
-                fclose(mergeLCP);
-                fclose(mergeDA);
+                // for(m = 0; m < n; m++){
+                //     if(DA[m] < docsSeparator)
+                //         DA[m] = 0;
+                //     else
+                //         DA[m] = 1;
+                // }
 
                 // Initialize BOSS variables
                 last = (int*)malloc(n*sizeof(int));
@@ -224,23 +221,32 @@ int main(int argc, char *argv[]){
                 colors = (int*)malloc(n*sizeof(int));
                 W = (char*)malloc(n*sizeof(char));
 
-                int boss_len = boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage);
+                int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, docsSeparator, memory);
 
                 // Print BOSS result
-                print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
+                // print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
                 
-                free(LCP);free(BWT);free(last);free(W);free(Wm);free(colors);
+                // free(LCP);free(BWT);
+                free(last);free(W);free(Wm);free(colors);
+
+
+                fclose(mergeBWT);
+                fclose(mergeLCP);
 
                 /******** Compute BWSD ********/
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(DA, reduced_LCP, coverage, boss_len, k, &expectation, &entropy);
+                // bwsd(mergeDA, reduced_LCP, coverage, boss_len, k, &expectation, &entropy, docsSeparator, memory);
+
+
+                fclose(mergeDA);
         
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
 
-                free(DA); free(reduced_LCP);
+                // free(DA); 
+                free(reduced_LCP);
             } else if (j == i){
                 Dm[i][j] = 0;
                 De[i][j] = 0;
@@ -249,7 +255,7 @@ int main(int argc, char *argv[]){
     }    
 
     // Print BWSD results
-    print_bwsd_matrixes(Dm, De, files, files_n);
+    // print_bwsd_matrixes(Dm, De, files, files_n);
 
     // system("rm -rf tmp");
 }

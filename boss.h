@@ -1,7 +1,7 @@
 
 void Wi_sort(char *Wi, int *Wm, int *colors, int *coverage, int start, int end);
 
-int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage);
+int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, size_t docsSeparator, int mem);
 
 void print_boss_result(int boss_len, char *file1, char *file2, int *C, int *last, char *W, int *Wm, int *colors, short *reduced_LCP, int *coverage, int total_coverage);
 
