@@ -179,9 +179,10 @@ int main(int argc, char *argv[]){
 
                 // Coverage information variables
                 int total_coverage = 0;
-                int *reduced_LCP, *coverage;
+                short *reduced_LCP;
+                int *coverage;
 
-                reduced_LCP = (int*)malloc(n*sizeof(int));
+                reduced_LCP = (short*)malloc(n*sizeof(short));
                 coverage = (int*)malloc(n*sizeof(int));
 
                 // Initialize variables needed to construct BOSS

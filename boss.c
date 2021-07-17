@@ -118,7 +118,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -146,7 +146,7 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] that is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]] = bi;
+                        int existing_pos = Wi_first_occurrence[DA[bi]][BWT[bi]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
