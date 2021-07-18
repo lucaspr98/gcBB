@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
 
                 // Coverage information variables
                 int total_coverage = 0;
-                short *reduced_LCP; 
+                short *reduced_LCP;
                 int *coverage;
 
                 reduced_LCP = (short*)malloc(n*sizeof(short));
