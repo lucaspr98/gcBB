@@ -100,8 +100,9 @@ int boss_construction(short *LCP, int *DA, char *BWT, int *C, int *last, char *W
     while(bi < n){
         // more than one outgoing edge of vertex i
         if(LCP[bi+1] >= k && bi != n-1){
-            // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            if(BWT[i] != '$'){
+            // since there is more than one outgoing edge, we don't need to check if BWT = $ 
+            if(BWT[bi] != '$'){ //BWT[bi] or BWT[i] ? check later!!
+                // check if there is already BWT[bi] in Wi range
                 if(Wi_freq[BWT[bi]] == 0){
                     // Add values to BOSS representation
                     add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[bi]], &Wm[i], BWT[bi], DA[bi], LCP[bi], Wi_size, 0);
