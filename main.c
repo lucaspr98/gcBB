@@ -22,12 +22,16 @@ int main(int argc, char *argv[]){
     int path_len;
     int opt;
     int memory = 1000;
+    int printBoss = 0;
 
     /******** Check arguments ********/
 
     int valid_opts = 0;
-    while ((opt = getopt (argc, argv, "k:m:")) != -1){
+    while ((opt = getopt (argc, argv, "pk:m:")) != -1){
         switch (opt){
+            case 'p':
+                printBoss = 1;
+                break;
             case 'k':
                 valid_opts++;
                 k = atoi(optarg);
@@ -109,9 +113,9 @@ int main(int argc, char *argv[]){
     /******** Compute external needed files ********/
 
     // Computes SA, BWT, LCP and DA from both files
-    // for(i = 0; i < files_n; i++){
-    //     compute_file(path, files[i], k);
-    // }
+    for(i = 0; i < files_n; i++){
+        compute_file(path, files[i], k);
+    }
 
     // Remove file format from the string
     for(i = 0; i < files_n; i++){
@@ -123,11 +127,11 @@ int main(int argc, char *argv[]){
     }
     
     // Computes merge of files
-    // for(i = 0; i < files_n; i++){
-    //     for(j = i+1; j < files_n; j++){
-    //         compute_merge_files(path, files[i], files[j], k);
-    //     }
-    // }
+    for(i = 0; i < files_n; i++){
+        for(j = i+1; j < files_n; j++){
+            compute_merge_files(path, files[i], files[j], k);
+        }
+    }
 
     // Similarity matrix based on expectation
     double **Dm = (double**)malloc(files_n*sizeof(double*));
@@ -199,7 +203,8 @@ int main(int argc, char *argv[]){
                 int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, docsSeparator, memory);
 
                 // Print BOSS result
-                print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
+                if(printBoss)
+                    print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
                 
                 free(last);free(W);free(Wm);
 
