@@ -1,5 +1,5 @@
 
-void bwsd(FILE *mergeDA, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, size_t docsSeparator, int mem);
+void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, size_t docsSeparator, int mem);
 
 double bwsd_expectation(int *t, int s, int n);
 

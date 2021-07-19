@@ -98,9 +98,9 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
     int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
     memset(DA_freq, 0,  sizeof(int)*samples*255);
 
-    short *LCP = (short*)malloc((mem+1)*sizeof(short));
-    int *DA = (int*)malloc(mem*sizeof(int));
-    char *BWT = (char*)malloc(mem*sizeof(char));
+    short *LCP = (short*)malloc((mem+2)*sizeof(short));
+    int *DA = (int*)malloc((mem+1)*sizeof(int));
+    char *BWT = (char*)malloc((mem+1)*sizeof(char));
 
     fread(LCP, sizeof(short), mem+1, mergeLCP);
     fread(DA, sizeof(int), mem, mergeDA);
@@ -109,6 +109,18 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
     for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
 
     while(bi < n){
+
+        // read next block
+        if(bi != 0 && bi%mem == 0){
+            fseek(mergeLCP, -2L, SEEK_CUR);
+            fread(LCP, sizeof(short), mem+1, mergeLCP);
+            fread(DA, sizeof(int), mem, mergeDA);
+            for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
+            fread(BWT, sizeof(char), mem, mergeBWT);
+            for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
+            block_pos = 0;
+        }
+
         // more than one outgoing edge of vertex i
         if(LCP[block_pos+1] >= k && bi != n-1){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
@@ -116,7 +128,7 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
                 if(Wi_freq[BWT[block_pos]] == 0){
                     // Add values to BOSS representation
                     add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[block_pos]], &Wm[i], BWT[block_pos], DA[block_pos], LCP[block_pos], Wi_size, 0);
-                    Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = block_pos;
+                    Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = bi;
                     // Increment variables
                     C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_freq[BWT[block_pos]]++; DA_freq[DA[block_pos]][BWT[block_pos]]++; Wi_size++; i++;
                     (*total_coverage)++;
@@ -124,7 +136,7 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
                     if(DA_freq[DA[block_pos]][BWT[block_pos]] == 0){
                         add_edge(i, &W[i], &last, &colors[i], &reduced_LCP[i], W_freq[BWT[block_pos]], &Wm[i], BWT[block_pos], DA[block_pos], LCP[block_pos], Wi_size, 0);
-                        Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = block_pos;
+                        Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = bi;
                         C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_freq[BWT[block_pos]]++; DA_freq[DA[block_pos]][BWT[block_pos]]++; Wi_size++; i++; 
                         (*total_coverage)++;
                     } else {
@@ -172,21 +184,12 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
                 memset(Wi_first_occurrence, 0, sizeof(int)*samples*255);
             }
             // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
-            if(LCP[bi+1] < k-1){
-                memset(W_freq, 0,  sizeof(int)*255);
+            if(LCP[block_pos+1] < k-1){
+                memset(W_freq, 0, sizeof(int)*255);
             }
             Wi_size = 0; 
         }
-
-        if(bi%mem){
-            // fseek(mergeLCP, bi, SEEK_SET);
-            fread(LCP, sizeof(short), mem+1, mergeLCP);
-            fread(DA, sizeof(int), mem, mergeDA);
-            for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
-            fread(BWT, sizeof(char), mem, mergeBWT);
-            for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
-            block_pos = 0;
-        }
+        block_pos++;
         bi++;
     }
 
