@@ -113,15 +113,20 @@ void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *
     *entropy = bwsd_shannon_entropy(t, pos/2, n);
 }
 
-void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){
     int i,j;
-    FILE *bwsd_matrixes = fopen(
-        #if COVERAGE
-            "results/bwsd_matrixes_coverage_1.txt", 
-        #else
-            "results/bwsd_matrixes_coverage_0.txt", 
-        #endif
-    "w");
+    char *ptr;
+    ptr = strchr(path, '/');
+    if (ptr != NULL)
+        *ptr = '\0';
+    char outputFile[128];
+    #if COVERAGE
+        sprintf(outputFile, "results/bwsd_matrixes_%s_coverage_1.txt", path);
+    #else
+        sprintf(outputFile, "results/bwsd_matrixes_%s_coverage_0.txt", path);
+    #endif
+
+    FILE *bwsd_matrixes = fopen(outputFile, "w");
     
     fprintf(bwsd_matrixes, "Expectation matrix (D_m):\n");
 

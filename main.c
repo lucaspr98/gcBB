@@ -120,9 +120,10 @@ int main(int argc, char *argv[]){
     // Remove file format from the string
     for(i = 0; i < files_n; i++){
         int len = strlen(files[i]);
-        char *buff = malloc(len*sizeof(char));
-        strncpy(buff, files[i], len-6);
-        strcpy(files[i], buff);
+        char *ptr;
+        ptr = strchr(files[i], '.');
+        if (ptr != NULL)
+            *ptr = '\0';
         printf("%s\n", files[i]);
     }
     
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]){
 
                 sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
                 sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-                sprintf(mergeDAFile, "tmp/merge.%s-%s.4.da", files[i], files[j]);
+                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.da", files[i], files[j]);
 
                 FILE *mergeBWT = fopen(mergeBWTFile, "r");
                 FILE *mergeLCP = fopen(mergeLCPFile, "rb");
@@ -230,7 +231,7 @@ int main(int argc, char *argv[]){
     }    
 
     // Print BWSD results
-    print_bwsd_matrixes(Dm, De, files, files_n);
+    print_bwsd_matrixes(Dm, De, files, files_n, path);
 
     // system("rm -rf tmp");
 }
@@ -239,9 +240,13 @@ void compute_file(char *path, char *file, int k){
     char eGap[256];
     int len = strlen(file);
     char *buff = malloc(len*sizeof(char));
-    strncpy(buff, file, len-6);
+    strcpy(buff, file); 
 
-    sprintf(eGap, "egap/eGap %s%s -m 8192 --em --rev --da  --lcp -o tmp/%s", path, file, buff);
+    char *ptr = strchr(file, '.');
+    if(ptr != NULL)
+        *ptr = '\0';
+
+    sprintf(eGap, "egap/eGap %s%s -m 12288 --em --rev --lcp -o tmp/%s", path, buff, file);
 
     system(eGap);
 }
@@ -249,7 +254,7 @@ void compute_file(char *path, char *file, int k){
 void compute_merge_files(char *path, char *file1, char *file2, int k){
     char eGapMerge[256];
 
-    sprintf(eGapMerge, "egap/eGap -m 8192 --em --bwt --trlcp %d --da --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
+    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
     
     system(eGapMerge);
 }

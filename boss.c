@@ -99,12 +99,11 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
     memset(DA_freq, 0,  sizeof(int)*samples*255);
 
     short *LCP = (short*)malloc((mem+2)*sizeof(short));
-    int *DA = (int*)malloc((mem+1)*sizeof(int));
+    char *DA = (char*)malloc((mem+1)*sizeof(char));
     char *BWT = (char*)malloc((mem+1)*sizeof(char));
 
     fread(LCP, sizeof(short), mem+1, mergeLCP);
-    fread(DA, sizeof(int), mem, mergeDA);
-    for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
+    fread(DA, sizeof(char), mem, mergeDA);
     fread(BWT, sizeof(char), mem, mergeBWT);
     for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
 
@@ -114,8 +113,8 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
         if(bi != 0 && bi%mem == 0){
             fseek(mergeLCP, -2L, SEEK_CUR);
             fread(LCP, sizeof(short), mem+1, mergeLCP);
-            fread(DA, sizeof(int), mem, mergeDA);
-            for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
+            fread(DA, 1, mem, mergeDA);
+            // for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
             fread(BWT, sizeof(char), mem, mergeBWT);
             for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
             block_pos = 0;

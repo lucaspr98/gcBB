@@ -63,11 +63,11 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag).
 
 ### Command line options
-*-k*
+*-k*    
     specify the size of k-mers used in the BOSS construction. The default value is k=30.
 
-*-m*        
+*-m*    
     specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
 
-*-p*
+*-p*    
     print boss results in files. 
