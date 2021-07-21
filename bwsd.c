@@ -38,7 +38,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, size_t docsSeparator, int mem){
+void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, int mem){
     int i;
 
     int *run_length = (int*)malloc((n*3)*sizeof(int));
@@ -116,15 +116,25 @@ void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){
     int i,j;
     char *ptr;
-    ptr = strchr(path, '/');
-    if (ptr != NULL)
-        *ptr = '\0';
     char outputFile[128];
-    #if COVERAGE
-        sprintf(outputFile, "results/bwsd_matrixes_%s_coverage_1.txt", path);
-    #else
-        sprintf(outputFile, "results/bwsd_matrixes_%s_coverage_0.txt", path);
-    #endif
+    if(files_n > 2){
+        ptr = strchr(path, '/');
+        if (ptr != NULL)
+            *ptr = '\0';
+
+        #if COVERAGE
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_1.txt", path);
+        #else
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_0.txt", path);
+        #endif
+    } else {
+        #if COVERAGE
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_1.txt", files[0], files[1]);
+        #else
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_0.txt", files[0], files[1]);
+        #endif
+    }
+    
 
     FILE *bwsd_matrixes = fopen(outputFile, "w");
     

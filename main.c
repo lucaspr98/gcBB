@@ -161,7 +161,7 @@ int main(int argc, char *argv[]){
 
                 sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
                 sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.da", files[i], files[j]);
+                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
 
                 FILE *mergeBWT = fopen(mergeBWTFile, "r");
                 FILE *mergeLCP = fopen(mergeLCPFile, "rb");
@@ -189,11 +189,12 @@ int main(int argc, char *argv[]){
                 for(int z = 0; z < n; z++)
                     coverage[z] = 1;
 
-                char docsFile[128];
-                sprintf(docsFile, "tmp/%s.docs", files[i]);
-                FILE *docs = fopen(docsFile, "r");
-                size_t docsSeparator;
-                fread(&docsSeparator, 8, 1, docs);
+                // not necessary anymore
+                // char docsFile[128];
+                // sprintf(docsFile, "tmp/%s.docs", files[i]);
+                // FILE *docs = fopen(docsFile, "r");
+                // size_t docsSeparator;
+                // fread(&docsSeparator, 8, 1, docs);
 
                 // Initialize BOSS variables
                 last = (int*)malloc(n*sizeof(int));
@@ -201,7 +202,7 @@ int main(int argc, char *argv[]){
                 colors = (int*)malloc(n*sizeof(int));
                 W = (char*)malloc(n*sizeof(char));
 
-                int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, docsSeparator, memory);
+                int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory);
 
                 // Print BOSS result
                 if(printBoss)
@@ -217,12 +218,12 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(colors, reduced_LCP, coverage, boss_len, k, &expectation, &entropy, docsSeparator, memory);
+                bwsd(colors, reduced_LCP, coverage, boss_len, k, &expectation, &entropy, memory);
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
  
-                free(reduced_LCP);free(colors);
+                free(reduced_LCP);free(colors);free(coverage);
             } else if (j == i){
                 Dm[i][j] = 0;
                 De[i][j] = 0;
@@ -237,24 +238,37 @@ int main(int argc, char *argv[]){
 }
 
 void compute_file(char *path, char *file, int k){
-    char eGap[256];
     int len = strlen(file);
-    char *buff = malloc(len*sizeof(char));
+    char buff[len+1];
     strcpy(buff, file); 
 
     char *ptr = strchr(file, '.');
     if(ptr != NULL)
         *ptr = '\0';
 
-    sprintf(eGap, "egap/eGap %s%s -m 12288 --em --rev --lcp -o tmp/%s", path, buff, file);
-
-    system(eGap);
+    char output[len+10];
+    sprintf(output, "tmp/%s.bwt", file);
+    FILE *tmp = fopen(output, "r");
+    if(!tmp){
+        char eGap[256];
+        sprintf(eGap, "egap/eGap %s%s -m 12288 --em --rev --lcp -o tmp/%s", path, buff, file);
+        system(eGap);    
+    } else
+        fclose(tmp);
 }
 
 void compute_merge_files(char *path, char *file1, char *file2, int k){
-    char eGapMerge[256];
+    int len1 = strlen(file1); 
+    int len2 = strlen(file2);
+    int tmpSize = len1+len2+4;
 
-    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
-    
-    system(eGapMerge);
+    char output[len1+len2+12];
+    sprintf(output, "tmp/merge.%s-%s.bwt", file1, file2);
+    FILE *tmp = fopen(output, "r");
+    if(!tmp){
+        char eGapMerge[256];
+        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
+        system(eGapMerge);    
+    } else 
+        fclose(tmp);
 }

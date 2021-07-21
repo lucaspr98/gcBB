@@ -83,7 +83,7 @@ void add_edge(int i, char *W, int **last, int *colors, short *reduced_LCP, int f
     }
 }
 
-int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, size_t docsSeparator, int mem){
+int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, int mem){
     size_t i = 0; // iterates through Wi
     int j = 0;
     size_t bi = 0; // iterates through BWT, LCP and DA 
@@ -114,7 +114,6 @@ int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int
             fseek(mergeLCP, -2L, SEEK_CUR);
             fread(LCP, sizeof(short), mem+1, mergeLCP);
             fread(DA, 1, mem, mergeDA);
-            // for(j = 0; j < mem; j++) DA[j] = DA[j] < docsSeparator ? 0 : 1;
             fread(BWT, sizeof(char), mem, mergeBWT);
             for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
             block_pos = 0;
