@@ -49,7 +49,7 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ```sh
 ./gcBB dataset/ reads1.fastq reads2.fastq -p
 ```
-In directory results, there will be two files, `reads1-reads2.boss` and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag). 
+In directory results, there will be two files, `reads1-reads2.boss` and `reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
@@ -60,7 +60,7 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 ```sh
 ./gcBB influenza_dataset/ -p
 ```
-In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag).
+In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
 
 ### Command line options
 *-k*    
