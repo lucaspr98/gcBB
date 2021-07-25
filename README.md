@@ -43,21 +43,31 @@ The code of gcBB provides the possibility of comparing a pair of genomes or all 
 ### Pair of genomes comparison
 To compute the BOSS representation and the BWSD between a pair of genomes run gcBB using the command:
 ```sh
-./gcBB <path_to_dir> <input1.fastq> <input2.fastq> <k>
+./gcBB <path_to_dir> <input1.fastq> <input2.fastq>
 ```
 **Example:**
 ```sh
-./gcBB dataset/ reads1.fastq reads2.fastq 3
+./gcBB dataset/ reads1.fastq reads2.fastq -p
 ```
-In directory results, there will be two files, `1-2.boss` and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag). 
+In directory results, there will be two files, `reads1-reads2.boss` and `reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
 ```sh
-./gcBB <path_to_dir> <k>
+./gcBB <path_to_dir>
 ```
 **Example:**
 ```sh
-./gcBB influenza_dataset/ 3
+./gcBB influenza_dataset/ -p
 ```
-In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `bwsd_matrixes_coverage_0.txt` or `bwsd_matrixes_coverage_1.txt`(depending on the compilation flag).
+In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
+
+### Command line options
+*-k*    
+    specify the size of k-mers used in the BOSS construction. The default value is k=30.
+
+*-m*    
+    specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
+
+*-p*    
+    print boss results in files. 

@@ -38,7 +38,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy){
+void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, int mem){
     int i;
 
     int *run_length = (int*)malloc((n*3)*sizeof(int));
@@ -46,45 +46,46 @@ void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expect
     run_length[0] = 0;
     run_length[1] = 0;
     int pos = 1;
+
     for(i = 0; i < n; i++){
         #if COVERAGE 
-        if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && DA[i] != DA[i+1]){
+        if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && colors[i] != colors[i+1]){
             if(coverage[i] >= coverage[i+1]){
                 int repetitions = 0;
-                int flip = DA[i];
+                int flip = colors[i];
                 while(repetitions <= coverage[i+1]){
                     run_length[pos+1] = flip;
                     run_length[pos+2] = 1;
                     pos += 2;
-                    flip = flip == DA[i] ? DA[i+1] : DA[i];
+                    flip = flip == colors[i] ? colors[i+1] : colors[i];
                     repetitions++;
                 }
                 int remaining = coverage[i] - repetitions;
-                run_length[pos+1] = DA[i];
+                run_length[pos+1] = colors[i];
                 run_length[pos+2] = remaining;
                 pos += 2; 
             } 
             else {
                 int repetitions = 0;
-                int flip = DA[i];
+                int flip = colors[i];
                 while(repetitions <= coverage[i]){
                     run_length[pos+1] = flip;
                     run_length[pos+2] = 1;
                     pos += 2;
-                    flip = flip == DA[i] ? DA[i+1] : DA[i];
+                    flip = flip == colors[i] ? colors[i+1] : colors[i];
                     repetitions++;
                 }
                 int remaining = coverage[i+1] - repetitions;
-                run_length[pos+1] = DA[i+1];
+                run_length[pos+1] = colors[i+1];
                 run_length[pos+2] = remaining;
                 pos += 2; 
             }
         } else { 
         #endif
-            if(DA[i] == current)
+            if(colors[i] == current)
                 run_length[pos]++;
             else {
-                current = DA[i];
+                current = colors[i];
                 run_length[pos+1]=current;
                 run_length[pos+2]=1;
                 pos += 2;
@@ -92,6 +93,8 @@ void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expect
         #if COVERAGE
         }
         #endif
+
+        i++;
     }
     if(run_length[pos-1] == 0){
         pos+= 2;
@@ -110,15 +113,30 @@ void bwsd(int *DA, int *reduced_LCP, int *coverage, int n, int k, double *expect
     *entropy = bwsd_shannon_entropy(t, pos/2, n);
 }
 
-void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n){
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){
     int i,j;
-    FILE *bwsd_matrixes = fopen(
+    char *ptr;
+    char outputFile[128];
+    if(files_n > 2){
+        ptr = strchr(path, '/');
+        if (ptr != NULL)
+            *ptr = '\0';
+
         #if COVERAGE
-            "results/bwsd_matrixes_coverage_1.txt", 
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_1.txt", path);
         #else
-            "results/bwsd_matrixes_coverage_0.txt", 
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_0.txt", path);
         #endif
-    "w");
+    } else {
+        #if COVERAGE
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_1.txt", files[0], files[1]);
+        #else
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_0.txt", files[0], files[1]);
+        #endif
+    }
+    
+
+    FILE *bwsd_matrixes = fopen(outputFile, "w");
     
     fprintf(bwsd_matrixes, "Expectation matrix (D_m):\n");
 
