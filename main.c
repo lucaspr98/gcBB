@@ -30,14 +30,15 @@ int main(int argc, char *argv[]){
     while ((opt = getopt (argc, argv, "pk:m:")) != -1){
         switch (opt){
             case 'p':
+                valid_opts+=1;
                 printBoss = 1;
                 break;
             case 'k':
-                valid_opts++;
+                valid_opts += 2;
                 k = atoi(optarg);
                 break;
             case 'm':
-                valid_opts++;
+                valid_opts += 2;
                 memory = atoi(optarg);
                 break;
             case '?':
@@ -55,7 +56,9 @@ int main(int argc, char *argv[]){
         }
     }
 
-    if(argc-2*valid_opts == 2){
+    printf("%d\n", valid_opts);
+
+    if(argc-valid_opts == 2){
         DIR *folder;
         struct dirent *entry;
         int len;
@@ -83,7 +86,7 @@ int main(int argc, char *argv[]){
         }
 
         closedir(folder);
-    } else if(argc-2*valid_opts == 4){
+    } else if(argc-valid_opts == 4){
         int file_len;
         path_len = strlen(argv[argc-3]);
         path = (char*)malloc(path_len*sizeof(char));
