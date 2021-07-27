@@ -3,15 +3,13 @@
 #include <string.h>
 #include <math.h>
 
-// void concatenate_fastq_files(char *file1, char *file2);
-
 void compute_files(char *file1, char *file2, int k);
 
-void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
+void boss_construction(short *LCP, char *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
 
 void Wi_sort(char *Wi, int *Wm,  int *colors, int start, int end);
 
-void bwsd(int *DA, int n, double *expectation, double *entropy);
+void bwsd(int *colors, int n, double *expectation, double *entropy);
 
 double bwsd_expectation(int *t, int s, int n);
 
@@ -31,9 +29,6 @@ int main(int argc, char *argv[]){
     char *file1 = argv[1];
     char *file2 = argv[2];
     int k = atoi(argv[3]);
-
-    // Concatenate fastq files into external file
-    // concatenate_fastq_files(file1, file2);
     
     // Computes SA, BWT, LCP and DA from both files
     compute_files(file1, file2, k);
@@ -42,22 +37,15 @@ int main(int argc, char *argv[]){
     FILE *mergeLCP = fopen("merge.2.lcp", "rb");
     FILE *mergeDA = fopen("merge.1.cda", "rb");
 
-    char docs[128];
-    sprintf(docs, "%s.docs", file1);
-    FILE *mergeDocs = fopen(docs, "rb");    
-
     fseek(mergeBWT, 0, SEEK_END);
     int n = ftell(mergeBWT);
     rewind(mergeBWT);
 
-    int docsSize;
-    fread(&docsSize, 4, 1, mergeDocs);
-
     // /******** Construct BOSS representation ********/
 
     // Declare needed variables
-    char *BWT;
-    int *LCP, *DA;
+    char *BWT, *DA;
+    short *LCP;
     int *last, *Wm, *colors;
     char *W;
     int C[255];
@@ -65,12 +53,12 @@ int main(int argc, char *argv[]){
 
     // Initialize variables needed to construct BOSS
     BWT = (char*)malloc(n*sizeof(char));
-    LCP = (int*)malloc(n*sizeof(int));
-    DA = (int*)malloc(n*sizeof(int));
+    LCP = (short*)malloc(n*sizeof(short));
+    DA = (char*)malloc(n*sizeof(char));
 
     fread(BWT, sizeof(char), n, mergeBWT);
-    fread(LCP, sizeof(int), n, mergeLCP);
-    fread(DA, sizeof(int), n, mergeDA);
+    fread(LCP, sizeof(short), n, mergeLCP);
+    fread(DA, sizeof(char), n, mergeDA);
     int buff;
     for(i = 0; i < n; i++){
         if(BWT[i] == 0)
@@ -84,66 +72,23 @@ int main(int argc, char *argv[]){
     colors = (int*)malloc(n*sizeof(int));
     W = (char*)malloc(n*sizeof(char));
 
-    // for(i = 0; i < n; i++)
-    //     printf("%c, ", BWT[i]);
-    // printf("\n");
-
-    // for(i = 0; i < n; i++)
-    //     printf("%d, ", LCP[i]);
-    // printf("\n");
-
-    // for(i = 0; i < n; i++)
-    //     printf("%d, ", DA[i]);
-    // printf("\n");
-
-    // boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+    boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
 
     // // BWSD
-    // double expectation, entropy;
+    double expectation, entropy;
 
-    // bwsd(DA, n, &expectation, &entropy);
+    bwsd(colors, n, &expectation, &entropy);
 
 }
-
-// void concatenate_fastq_files(char *file1, char *file2){
-//     FILE *concat = fopen("fastq_concat.txt", "w");
-//     FILE *fastq1 = fopen(file1, "r");
-//     FILE *fastq2 = fopen(file2, "r");
-//     int n;
-
-//     char *buff = (char*)malloc(105*sizeof(char));
-//     while(1) {
-//         fscanf(fastq1, " %[^\n]", buff);
-//         fscanf(fastq1, " %[^\n]", buff);
-//         fprintf(concat, "%s", buff);
-//         fprintf(concat, "%c\n", 0);
-//         fscanf(fastq1, " %[^\n]", buff);
-//         fscanf(fastq1, " %[^\n]", buff);
-//         if(feof(fastq1)) { 
-//             break ;
-//         }     
-//     }
-//     while(1) {
-//         fscanf(fastq2, " %[^\n]", buff);
-//         fscanf(fastq2, " %[^\n]", buff);
-//         fprintf(concat, "%s", buff);
-//         fprintf(concat, "%c\n", 0);
-//         fscanf(fastq2, " %[^\n]", buff);
-//         fscanf(fastq2, " %[^\n]", buff);
-//         if(feof(fastq2)) { 
-//             break ;
-//         }     
-//     }
-// }
 
 void compute_files(char *file1, char *file2, int k){
     char eGap1[128];
     char eGap2[128];
     char eGapMerge[128];
 
-    sprintf(eGap1, "egap/eGap -m 12288 --em --rev --lcp -o %s",   file1);
-    sprintf(eGap2, "egap/eGap -m 12288 --em --rev --lcp -o %s",  file2);
-    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev -o merge %s.bwt %s.bwt", k, file1, file2);
+    sprintf(eGap1, "egap/eGap %s -m 12288 --em --rev --lcp -o reads1", file1);
+    sprintf(eGap2, "egap/eGap %s -m 12288 --em --rev --lcp -o reads2", file2);
+    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev -o merge reads1.bwt reads2.bwt", k);
 
     system(eGap1);
     system(eGap2);
@@ -203,7 +148,7 @@ void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
     }
 }
 
-void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
+void boss_construction(short *LCP, char *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
     int i = 0; // iterates through Wi
     int j = 0; // auxiliary iterator  
     int bi = 0; // iterates through BWT and LCP
@@ -219,7 +164,7 @@ void boss_construction(int *LCP, int *DA, char *BWT, int *C, int *last, char *W,
         // more than one outgoing edge of vertex i
         if(LCP[bi+1] >= k && bi != n-1){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            if(BWT[i] != '$'){
+            if(BWT[bi] != '$'){
                 if(Wi_freq[BWT[bi]] == 0){
                     // Add values to BOSS representation
                     W[i] = BWT[bi];
@@ -368,7 +313,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *DA, int n, double *expectation, double *entropy){
+void bwsd(int *colors, int n, double *expectation, double *entropy){
     int i;
 
     int *run_length = (int*)malloc((n+10)*sizeof(int));
@@ -377,10 +322,10 @@ void bwsd(int *DA, int n, double *expectation, double *entropy){
     run_length[1] = 0;
     int pos = 1;
     for(i = 0; i < n; i++){
-        if(DA[i] == current)
+        if(colors[i] == current)
             run_length[pos]++;
         else {
-            current = DA[i];
+            current = colors[i];
             run_length[pos+1]=current;
             run_length[pos+2]=1;
             pos += 2;

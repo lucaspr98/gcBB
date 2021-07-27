@@ -189,7 +189,7 @@ void boss(int *C, int *last, char *W, int *Wi, char **kmers, int line, int k){
 
     strcpy(last_node, "");
     strcpy(last_Wi, "");
-    memset(Wi_freq, 0,  sizeof(int)*255);
+    memset(Wi_freq, 0, sizeof(int)*255);
 
     for(i = 0; i < line; i++){
         if (strcmp(kmers[i], kmers[i+1]) != 0){
@@ -334,40 +334,54 @@ int main(int argc, char *argv[]) {
             break ;
         } 
 
-        int len = strlen(buff);
-        char kmer[k+1];
-        for(i = 0; i < len-k+1; i++){
-            for(j = 0; j < k; j++){
-                kmer[k-j-1] = buff[i+j];
-            }
-            kmer[k] = '\0';
+        int len = strlen(buff);        
+
+        if(len < k){
+            char kmer[len+1];
+            for(i = 0; i < len; i++){
+                kmer[len-i-1] = buff[i];
+                kmer[len] = '\0';
+            }  
             strcpy(kmers[line], kmer);
-            kmers[line][k] = '\0';
+            kmers[line][len] = '\0';
             line++;
+        } else {
+            char kmer[k+1];
+            for(i = 0; i < len-k+1; i++){
+
+                for(j = 0; j < k; j++){
+                    kmer[k-j-1] = buff[i+j];
+                }
+
+                kmer[k] = '\0';
+                strcpy(kmers[line], kmer);
+                kmers[line][k] = '\0';
+                line++;
+            }  
         }
-        
+          
     }
 
-    // for(i = 0; i < line; i++){
-    //     printf("%s\n", kmers[i]);
-    // }
+    for(i = 0; i < line; i++){
+        printf("%s\n", kmers[i]);
+    }
 
-    // printf("\nordenei pela aresta\n");
+    printf("\nordenei pela aresta\n");
     
     qsort(kmers, line, sizeof(*kmers), compare);
 
-    // for(i = 0; i < line; i++){
-    //     printf("%s\n", kmers[i]);
-    // }
+    for(i = 0; i < line; i++){
+        printf("%s\n", kmers[i]);
+    }
 
     radix_sort_string(kmers, line);
 
-    // printf("\nordenei com radix\n");
+    printf("\nordenei com radix\n");
 
-    // for(i = 0; i < line; i++){
-    //     printf("%s\n", kmers[i]);
-    // }
-    // printf("\n");
+    for(i = 0; i < line; i++){
+        printf("%s\n", kmers[i]);
+    }
+    printf("\n");
 
     char W[line+1];
     int last[line+1];
