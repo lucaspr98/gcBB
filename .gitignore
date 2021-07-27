@@ -1,4 +1,3 @@
-
 *.o
 *.lcp
 *.bwt
@@ -11,3 +10,10 @@ gcBB
 
 readbin.c
 readbin
+da.c
+docs.c
+
+tmp/
+results/
+validation/
+results-aux/

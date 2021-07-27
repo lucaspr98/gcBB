@@ -1,353 +1,277 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
+#include <dirent.h>
+#include <unistd.h>
 
-void compute_files(char *file1, char *file2, int k);
+#include "bwsd.h"
+#include "boss.h"
 
-void boss_construction(short *LCP, char *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples);
+void compute_file(char *path, char *file, int k);
 
-void Wi_sort(char *Wi, int *Wm,  int *colors, int start, int end);
-
-void bwsd(int *colors, int n, double *expectation, double *entropy);
-
-double bwsd_expectation(int *t, int s, int n);
-
-double bwsd_shannon_entropy(int *t, int s, int n);
+void compute_merge_files(char *path, char *file1, char *file2, int k);
 
 int main(int argc, char *argv[]){
-    int i;
+    int i, j, m;
+    char **files = (char**)malloc(32*sizeof(char*));
+    int k = 30;
+    int files_n = 0;
+    char *path;
+    int path_len;
+    int opt;
+    int memory = 1000;
+    int printBoss = 0;
 
-    /******** Check arguments and compute external needed files ********/
+    /******** Check arguments ********/
 
-    // Check arguments
-    if (argc < 4) {
-        printf("Missing argument!\nusage: ./bgc [file1.fastq] [file2.fastq] [k]\n");
+    int valid_opts = 0;
+    while ((opt = getopt (argc, argv, "pk:m:")) != -1){
+        switch (opt){
+            case 'p':
+                valid_opts+=1;
+                printBoss = 1;
+                break;
+            case 'k':
+                valid_opts += 2;
+                k = atoi(optarg);
+                break;
+            case 'm':
+                valid_opts += 2;
+                memory = atoi(optarg);
+                break;
+            case '?':
+                if(opt == 'k')
+                    fprintf (stderr, "Option -%c requires a integer value.\n", opt);
+                else if(opt == 'm')
+                    fprintf (stderr, "Option -%c requires a integer value.\n", opt);
+                else if (isprint (opt))
+                    fprintf (stderr, "Unknown option `-%c'.\n", opt);
+                else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n", opt);
+                return 1;
+            default:
+                abort ();
+        }
+    }
+
+    printf("%d\n", valid_opts);
+
+    if(argc-valid_opts == 2){
+        DIR *folder;
+        struct dirent *entry;
+        int len;
+        path_len = strlen(argv[argc-1]);
+        path = (char*)malloc(path_len*sizeof(char));
+        strcpy(path, argv[argc-1]);
+
+        folder = opendir(argv[argc-1]);
+        if(folder == NULL){
+            fprintf (stderr, "Unable to read directory %s\n", argv[argc-1]);
+            exit(-1);
+        }
+        while((entry=readdir(folder)) != NULL){
+            char *isFastq = strstr(entry->d_name, ".fastq");
+            char *isFasta = strstr(entry->d_name, ".fasta");
+
+            if((isFastq && strlen(isFastq) == 6) || (isFasta && strlen(isFasta) == 6)){
+                printf("%s\n", entry->d_name);
+                len = strlen(entry->d_name)+1;
+                files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
+
+                strcpy(files[files_n], entry->d_name);
+                files_n++;
+            }
+        }
+
+        closedir(folder);
+    } else if(argc-valid_opts == 4){
+        int file_len;
+        path_len = strlen(argv[argc-3]);
+        path = (char*)malloc(path_len*sizeof(char));
+        strcpy(path, argv[argc-3]);
+
+        file_len = strlen(argv[argc-2]);
+        files[0] = (char*)malloc((file_len+1)*sizeof(char));
+        strcpy(files[0], argv[argc-2]);
+
+        file_len = strlen(argv[argc-1]);
+        files[1] = (char*)malloc((file_len+1)*sizeof(char));
+        strcpy(files[1], argv[argc-1]);
+        
+        files_n = 2;
+    } else {
+        printf("Missing arguments!\n\n");
+        printf("To compute distance of all fastq files from a directory use command:\n");
+        printf("./gcBB <path_to_dir> --options\n\n");
+        printf("To compute distance of two fastq files use command:\n");
+        printf("./gcBB <path_to_dir> <file1> <file2> --options\n\n");
         exit(-1);
     }
 
-    char *file1 = argv[1];
-    char *file2 = argv[2];
-    int k = atoi(argv[3]);
-    
+    system("mkdir tmp");
+    system("mkdir results");
+
+    /******** Compute external needed files ********/
+
     // Computes SA, BWT, LCP and DA from both files
-    compute_files(file1, file2, k);
-
-    FILE *mergeBWT = fopen("merge.bwt", "r");
-    FILE *mergeLCP = fopen("merge.2.lcp", "rb");
-    FILE *mergeDA = fopen("merge.1.cda", "rb");
-
-    fseek(mergeBWT, 0, SEEK_END);
-    int n = ftell(mergeBWT);
-    rewind(mergeBWT);
-
-    // /******** Construct BOSS representation ********/
-
-    // Declare needed variables
-    char *BWT, *DA;
-    short *LCP;
-    int *last, *Wm, *colors;
-    char *W;
-    int C[255];
-    int samples = 2;
-
-    // Initialize variables needed to construct BOSS
-    BWT = (char*)malloc(n*sizeof(char));
-    LCP = (short*)malloc(n*sizeof(short));
-    DA = (char*)malloc(n*sizeof(char));
-
-    fread(BWT, sizeof(char), n, mergeBWT);
-    fread(LCP, sizeof(short), n, mergeLCP);
-    fread(DA, sizeof(char), n, mergeDA);
-    int buff;
-    for(i = 0; i < n; i++){
-        if(BWT[i] == 0)
-            BWT[i] = '$';
+    for(i = 0; i < files_n; i++){
+        compute_file(path, files[i], k);
     }
 
-    // Initialize BOSS variables
-    memset(C, 0, sizeof(int)*255);
-    last = (int*)malloc(n*sizeof(int));
-    Wm = (int*)malloc(n*sizeof(int));
-    colors = (int*)malloc(n*sizeof(int));
-    W = (char*)malloc(n*sizeof(char));
-
-    boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
-
-    // // BWSD
-    double expectation, entropy;
-
-    bwsd(colors, n, &expectation, &entropy);
-
-}
-
-void compute_files(char *file1, char *file2, int k){
-    char eGap1[128];
-    char eGap2[128];
-    char eGapMerge[128];
-
-    sprintf(eGap1, "egap/eGap %s -m 12288 --em --rev --lcp -o reads1", file1);
-    sprintf(eGap2, "egap/eGap %s -m 12288 --em --rev --lcp -o reads2", file2);
-    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev -o merge reads1.bwt reads2.bwt", k);
-
-    system(eGap1);
-    system(eGap2);
-    system(eGapMerge);
-}
-
-void Wi_sort(char *Wi, int *Wm, int *colors, int start, int end){
-    int i;
-    int range = end-start;
-    char Wi_tmp[range];
-    int Wm_tmp[range];
-    int colors_tmp[range];
-    int Wi_aux[255];
-    int Wm_aux[255];
-    int repetitive[255];
-
-    memset(Wi_tmp, 0, sizeof(char)*(range));    
-    memset(Wm_tmp, 0, sizeof(int)*(range)); 
-    memset(colors_tmp, 0, sizeof(int)*(range)); 
-    memset(Wi_aux, 0, sizeof(int)*255);
-    memset(repetitive, 0, sizeof(int)*255);
-    memset(Wm_aux, 0, sizeof(int)*255);
-
-    for(i = start; i < end; i++){
-        Wi_aux[Wi[i]]++;
-        Wm_aux[Wi[i]] += Wm[i];
+    // Remove file format from the string
+    for(i = 0; i < files_n; i++){
+        int len = strlen(files[i]);
+        char *ptr;
+        ptr = strchr(files[i], '.');
+        if (ptr != NULL)
+            *ptr = '\0';
+        printf("%s\n", files[i]);
     }
-
-    for(i = start; i < end; i++){
-        if(Wi_aux[Wi[i]] > 1)
-            repetitive[Wi[i]] = 1;
-    }
-
-    for(i = 1; i < 255; i++){
-        Wi_aux[i] += Wi_aux[i-1];
-    }
-
-    for(i = start; i < end; i++){
-        Wi_tmp[Wi_aux[Wi[i]]-1] = Wi[i];
-        
-        if(repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] == 0){
-            Wm_tmp[Wi_aux[Wi[i]]-1] = 1;
-        } else if (repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] > 0){
-            Wm_tmp[Wi_aux[Wi[i]]-1] = 0;
-            Wm_aux[Wi[i]]--;
-        } else {
-            Wm_tmp[Wi_aux[Wi[i]]-1] = Wm[i];
-        }
-        colors_tmp[Wi_aux[Wi[i]]-1] = colors[i];
-        Wi_aux[Wi[i]]--;
-    }
-
-    for(i = start; i < end; i++){
-        Wi[i] = Wi_tmp[i-start];
-        Wm[i] = Wm_tmp[i-start];
-        colors[i] = colors_tmp[i-start];
-    }
-}
-
-void boss_construction(short *LCP, char *DA, char *BWT, int *C, int *last, char *W, int *Wm, int *colors, int n, int k, int samples){
-    int i = 0; // iterates through Wi
-    int j = 0; // auxiliary iterator  
-    int bi = 0; // iterates through BWT and LCP
-    int Wi_size = 0; 
-    int W_freq[255]; // frequency of outgoing edges in a (k-1)-mer suffix range (detect W- = 1)
-    memset(W_freq, 0, sizeof(int)*255);
-    int Wi_freq[255]; // frequency of outgoing edges in a k-mer suffix range (detect same outgoing edge in a vertex)
-    memset(Wi_freq, 0,  sizeof(int)*255);
-    int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
-    memset(DA_freq, 0,  sizeof(int)*samples*255);
-
-    while(bi < n){
-        // more than one outgoing edge of vertex i
-        if(LCP[bi+1] >= k && bi != n-1){
-            // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            if(BWT[bi] != '$'){
-                if(Wi_freq[BWT[bi]] == 0){
-                    // Add values to BOSS representation
-                    W[i] = BWT[bi];
-                    colors[i] = DA[bi];
-                    if(Wi_size == 0){
-                        last[i] = 1;
-                    } else {
-                        last[i-1] = 0;
-                        last[i] = 1;
-                    }
-                    if(W_freq[BWT[bi]] == 0){
-                        Wm[i] = 1;
-                    }
-                    // Increment variables
-                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
-                } else {
-                    // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[bi]][BWT[bi]] == 0){
-                        W[i] = BWT[bi];
-                        colors[i] = DA[bi];
-                        if(Wi_size == 0){
-                            last[i] = 1;
-                        } else {
-                            last[i-1] = 0;
-                            last[i] = 1;
-                        }
-                        if(W_freq[BWT[bi]] == 0){
-                            Wm[i] = 1;
-                        }
-                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
-                    }
-                }
-            }
-        } else {
-            // if(BWT[bi] == 0)
-            //     BWT[bi] = '$';
-            // just one outgoing edge of vertex i
-            if(Wi_size == 0){
-                W[i] = BWT[bi];
-                colors[i] = DA[bi];
-                last[i] = 1;
-                if(W_freq[BWT[bi]] == 0){
-                    Wm[i] = 1;
-                }
-                C[BWT[bi]]++; W_freq[BWT[bi]]++; i++;
-            } 
-            // last outgoing edge of vertex i
-            else {
-                // check if there is already outgoing edge labeled with BWT[bi] leaving vertex i
-                if(Wi_freq[BWT[bi]] == 0){
-                    W[i] = BWT[bi];
-                    last[i-1] = 0;
-                    last[i] = 1;
-                    colors[i] = DA[bi];
-                    if(W_freq[BWT[bi]] == 0){
-                        Wm[i] = 1;
-                    }
-                    C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_size++; i++;
-                } else {
-                    // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[bi]][BWT[bi]] == 0){
-                        W[i] = BWT[bi];
-                        colors[i] = DA[bi];
-                        if(Wi_size == 0){
-                            last[i] = 1;
-                        } else {
-                            last[i-1] = 0;
-                            last[i] = 1;
-                        }
-                        if(W_freq[BWT[bi]] == 0){
-                            Wm[i] = 1;
-                        }
-                        C[BWT[bi]]++; W_freq[BWT[bi]]++; Wi_freq[BWT[bi]]++; DA_freq[DA[bi]][BWT[bi]]++; Wi_size++; i++; 
-                    }
-                }
-                // sort outgoing edges of vertex i in lexigraphic order
-                if(Wi_size > 1){
-                    Wi_sort(W, Wm, colors, i-Wi_size, i);
-                }
-                // clean frequency variables of outgoing edges in Wi 
-                memset(Wi_freq, 0, sizeof(int)*255);   
-                memset(DA_freq, 0, sizeof(int)*samples*255);
-            }
-            // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
-            if(LCP[bi+1] < k-1){
-                memset(W_freq, 0,  sizeof(int)*255);
-            }
-            Wi_size = 0; 
-        }
-        bi++;
-    }
-
-    // fix C values
-    C[1] = C['$'];
-    C[2] = C['A'] + C[1];
-    C[3] = C['C'] + C[2];
-    C[4] = C['G'] + C[3];
-    C[5] = C['N'] + C[4];
-
-    C[0] = 0;
-
-    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    // Print results 
-    printf("C array:\n");
-    for(j = 0; j < 6; j++){
-        printf("%c %d\n", alphabet[j], C[j]);
-    }
-    printf("\n");
-
-    printf("BOSS:\nlast\tW\tW-\tcolor\n");
-    // printf("BOSS:\nW\n");
-
-    for(j = 0; j < i; j++){
-        printf("%d\t\t%c\t%d\t%d\n", last[j], W[j], Wm[j], colors[j]);
-        // printf("%c\n",W[j]);
-    }
-};
-
-double bwsd_expectation(int *t, int s, int n){
-    int i;
-	double value = 0.0;
-    double frac;
     
-	for(i = 1; i < n; i++){
-        if(t[i] != 0){
-            frac = (double)t[i]/s;
-            value += i*frac;
+    // Computes merge of files
+    for(i = 0; i < files_n; i++){
+        for(j = i+1; j < files_n; j++){
+            compute_merge_files(path, files[i], files[j], k);
         }
     }
 
-    return value-1;
-}
+    // Similarity matrix based on expectation
+    double **Dm = (double**)malloc(files_n*sizeof(double*));
+    for(i = 0; i < files_n; i++)
+        Dm[i] = (double*)malloc(files_n*sizeof(double));
 
-double bwsd_shannon_entropy(int *t, int s, int n){
-    int i;
-	double value = 0.0;
-	
-    for(i = 1; i < n; i++){
-        if(t[i] != 0){
-            double frac = (double)t[i]/s;
-            value += frac*log2(frac);
+    // Similarity matrix based on shannons entropy
+    double **De = (double**)malloc(files_n*sizeof(double*));
+    for(i = 0; i < files_n; i++)
+        De[i] = (double*)malloc(files_n*sizeof(double));
+
+    // Initialize matrixes
+    for(i = 0; i < files_n; i++){
+        for(j = 0; j < files_n; j++){
+            Dm[i][j] = 0;
+            De[i][j] = 0;
         }
     }
 
-    return value*(-1);
+    for(i = 0; i < files_n; i++){
+        for(j = 0; j < files_n; j++){
+            if(j > i){
+                char mergeBWTFile[128];
+                char mergeLCPFile[128];
+                char mergeDAFile[128];
 
-}
+                sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
+                sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
+                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
 
-void bwsd(int *colors, int n, double *expectation, double *entropy){
-    int i;
+                FILE *mergeBWT = fopen(mergeBWTFile, "r");
+                FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+                FILE *mergeDA = fopen(mergeDAFile, "rb");
 
-    int *run_length = (int*)malloc((n+10)*sizeof(int));
-    int current = 0;
-    run_length[0] = 0;
-    run_length[1] = 0;
-    int pos = 1;
-    for(i = 0; i < n; i++){
-        if(colors[i] == current)
-            run_length[pos]++;
-        else {
-            current = colors[i];
-            run_length[pos+1]=current;
-            run_length[pos+2]=1;
-            pos += 2;
+                fseek(mergeBWT, 0, SEEK_END);
+                size_t n = ftell(mergeBWT);
+                rewind(mergeBWT);
+
+                /******** Construct BOSS representation ********/
+
+                // BOSS construction needed variables
+                int *last, *Wm, *colors;
+                char *W;
+                int C[255] = {0};
+                int samples = 2;
+
+                // Coverage information variables
+                int total_coverage = 0;
+                short *reduced_LCP;
+                int *coverage;
+
+                reduced_LCP = (short*)malloc(n*sizeof(short));
+                coverage = (int*)malloc(n*sizeof(int));
+                for(int z = 0; z < n; z++)
+                    coverage[z] = 1;
+
+                // not necessary anymore
+                // char docsFile[128];
+                // sprintf(docsFile, "tmp/%s.docs", files[i]);
+                // FILE *docs = fopen(docsFile, "r");
+                // size_t docsSeparator;
+                // fread(&docsSeparator, 8, 1, docs);
+
+                // Initialize BOSS variables
+                last = (int*)malloc(n*sizeof(int));
+                Wm = (int*)malloc(n*sizeof(int));
+                colors = (int*)malloc(n*sizeof(int));
+                W = (char*)malloc(n*sizeof(char));
+
+                int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory);
+
+                // Print BOSS result
+                if(printBoss)
+                    print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
+                
+                free(last);free(W);free(Wm);
+
+                fclose(mergeBWT);
+                fclose(mergeLCP);
+                fclose(mergeDA);
+
+                /******** Compute BWSD ********/
+                double expectation, entropy;
+                expectation = entropy = 0;
+
+                bwsd(colors, reduced_LCP, coverage, boss_len, k, &expectation, &entropy, memory);
+
+                Dm[i][j] = expectation;
+                De[i][j] = entropy;
+ 
+                free(reduced_LCP);free(colors);free(coverage);
+            } else if (j == i){
+                Dm[i][j] = 0;
+                De[i][j] = 0;
+            }
         }
-    }
-    if(run_length[pos-1] == 0){
-        pos+= 2;
-        run_length[pos-1] = 1;
-        run_length[pos] = 0;
-    }
-    pos++; //size of run_lentgh
+    }    
 
-    int *t = (int*)malloc(n*sizeof(int));
-    memset(t, 0, (n+10)*sizeof(int));
-    for(i = 0; i < pos; i+=2){
-        t[run_length[i+1]]++;
-    }
+    // Print BWSD results
+    print_bwsd_matrixes(Dm, De, files, files_n, path);
 
-    *expectation = bwsd_expectation(t, pos/2, n);
-    *entropy = bwsd_shannon_entropy(t, pos/2, n);
-
-    printf("BWSD:\n");
-    printf("Expectation: %.5lf\nShannons Entropy: %.5lf\n", *expectation, *entropy);
+    // system("rm -rf tmp");
 }
 
+void compute_file(char *path, char *file, int k){
+    int len = strlen(file);
+    char buff[len+1];
+    strcpy(buff, file); 
+
+    char *ptr = strchr(file, '.');
+    if(ptr != NULL)
+        *ptr = '\0';
+
+    char output[len+10];
+    sprintf(output, "tmp/%s.bwt", file);
+    FILE *tmp = fopen(output, "r");
+    if(!tmp){
+        char eGap[256];
+        sprintf(eGap, "egap/eGap %s%s -m 12288 --em --rev --lcp -o tmp/%s", path, buff, file);
+        system(eGap);    
+    } else
+        fclose(tmp);
+}
+
+void compute_merge_files(char *path, char *file1, char *file2, int k){
+    int len1 = strlen(file1); 
+    int len2 = strlen(file2);
+    int tmpSize = len1+len2+4;
+
+    char output[len1+len2+12];
+    sprintf(output, "tmp/merge.%s-%s.bwt", file1, file2);
+    FILE *tmp = fopen(output, "r");
+    if(!tmp){
+        char eGapMerge[256];
+        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
+        system(eGapMerge);    
+    } else 
+        fclose(tmp);
+}
