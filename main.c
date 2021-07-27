@@ -39,8 +39,8 @@ int main(int argc, char *argv[]){
     compute_files(file1, file2, k);
 
     FILE *mergeBWT = fopen("merge.bwt", "r");
-    FILE *mergeLCP = fopen("merge.4.lcp", "rb");
-    FILE *mergeDA = fopen("merge.4.da", "rb");
+    FILE *mergeLCP = fopen("merge.2.lcp", "rb");
+    FILE *mergeDA = fopen("merge.1.cda", "rb");
 
     char docs[128];
     sprintf(docs, "%s.docs", file1);
@@ -96,12 +96,12 @@ int main(int argc, char *argv[]){
     //     printf("%d, ", DA[i]);
     // printf("\n");
 
-    boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
+    // boss_construction(LCP, DA, BWT, C, last, W, Wm, colors, n, k, samples);
 
-    // BWSD
-    double expectation, entropy;
+    // // BWSD
+    // double expectation, entropy;
 
-    bwsd(DA, n, &expectation, &entropy);
+    // bwsd(DA, n, &expectation, &entropy);
 
 }
 
@@ -141,9 +141,9 @@ void compute_files(char *file1, char *file2, int k){
     char eGap2[128];
     char eGapMerge[128];
 
-    sprintf(eGap1, "egap/eGap -m 4096 --trlcp %d --rev --lbytes 4 --da %s", k,  file1);
-    sprintf(eGap2, "egap/eGap -m 4096 --trlcp %d --rev --lbytes 4 --da %s", k, file2);
-    sprintf(eGapMerge, "egap/eGap -m 4096 --trlcp %d --rev --bwt --lbytes 4 --da -o merge %s.bwt %s.bwt", k, file1, file2);
+    sprintf(eGap1, "egap/eGap -m 12288 --em --rev --lcp -o %s",   file1);
+    sprintf(eGap2, "egap/eGap -m 12288 --em --rev --lcp -o %s",  file2);
+    sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev -o merge %s.bwt %s.bwt", k, file1, file2);
 
     system(eGap1);
     system(eGap2);
