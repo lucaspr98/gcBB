@@ -9,6 +9,7 @@ COVERAGE = 0
 DEFINES = -DCOVERAGE=$(COVERAGE)
 
 all: $(TARGET)
+	make -C egap/
 
 $(TARGET): $(OBJFILES)
 	$(CC) -o $(TARGET) $(OBJFILES) -lm
