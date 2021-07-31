@@ -1,5 +1,5 @@
 
-void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, int mem);
+void bwsd(int *colors, short *reduced_LCP, int *coverage, size_t n, int k, double *expectation, double *entropy, int mem);
 
 double bwsd_expectation(int *t, int s, int n);
 

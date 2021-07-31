@@ -83,7 +83,7 @@ void add_edge(int i, char *W, int **last, int *colors, short *reduced_LCP, int f
     }
 }
 
-int boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, int mem){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, int *last, char *W, int *Wm, int *colors, size_t n, int k, int samples, short *reduced_LCP, int *coverage, int *total_coverage, int mem){
     size_t i = 0; // iterates through Wi
     int j = 0;
     size_t bi = 0; // iterates through BWT, LCP and DA 

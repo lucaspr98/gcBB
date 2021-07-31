@@ -10,5 +10,6 @@
         "string.h": "c",
         "bwsd.h": "c",
         "random": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }

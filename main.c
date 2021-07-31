@@ -191,20 +191,13 @@ int main(int argc, char *argv[]){
                 for(int z = 0; z < n; z++)
                     coverage[z] = 1;
 
-                // not necessary anymore
-                // char docsFile[128];
-                // sprintf(docsFile, "tmp/%s.docs", files[i]);
-                // FILE *docs = fopen(docsFile, "r");
-                // size_t docsSeparator;
-                // fread(&docsSeparator, 8, 1, docs);
-
                 // Initialize BOSS variables
                 last = (int*)malloc(n*sizeof(int));
                 Wm = (int*)malloc(n*sizeof(int));
                 colors = (int*)malloc(n*sizeof(int));
                 W = (char*)malloc(n*sizeof(char));
 
-                int boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory);
 
                 // Print BOSS result
                 if(printBoss)
