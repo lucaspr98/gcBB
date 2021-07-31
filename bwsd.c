@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <libgen.h>
 #include "bwsd.h"
 
 #ifndef COVERAGE
@@ -117,15 +118,20 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     int i,j;
     char *ptr;
     char outputFile[128];
+
+    int len = strlen(path);
+    char folder[len];
+    strcpy(folder, basename(path));
+
     if(files_n > 2){
         ptr = strchr(path, '/');
         if (ptr != NULL)
             *ptr = '\0';
 
         #if COVERAGE
-            sprintf(outputFile, "results/%s_distance_matrixes_coverage_1.txt", path);
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_1.txt", folder);
         #else
-            sprintf(outputFile, "results/%s_distance_matrixes_coverage_0.txt", path);
+            sprintf(outputFile, "results/%s_distance_matrixes_coverage_0.txt", folder);
         #endif
     } else {
         #if COVERAGE

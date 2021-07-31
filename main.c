@@ -5,6 +5,7 @@
 #include <math.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include "bwsd.h"
 #include "boss.h"
@@ -55,8 +56,6 @@ int main(int argc, char *argv[]){
                 abort ();
         }
     }
-
-    printf("%d\n", valid_opts);
 
     if(argc-valid_opts == 2){
         DIR *folder;
