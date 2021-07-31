@@ -39,18 +39,19 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *expectation, double *entropy, int mem){
-    int i;
+void bwsd(int *colors, short *reduced_LCP, int *coverage, size_t n, int k, double *expectation, double *entropy, int mem){
+    size_t i;
 
-    int *run_length = (int*)malloc((n*3)*sizeof(int));
+    size_t size = 2*n+1;
+    int *run_length = (int*)malloc(size*sizeof(int));
     int current = 0;
     run_length[0] = 0;
     run_length[1] = 0;
-    int pos = 1;
+    size_t pos = 1;
 
     for(i = 0; i < n; i++){
         #if COVERAGE 
-        if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && colors[i] != colors[i+1]){
+        if(reduced_LCP[i] > k && reduced_LCP[i+1] > k && colors[i] != colors[i+1] && coverage[i] > 1 ){
             if(coverage[i] >= coverage[i+1]){
                 int repetitions = 0;
                 int flip = colors[i];
@@ -83,9 +84,9 @@ void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *
             }
         } else { 
         #endif
-            if(colors[i] == current)
+            if(colors[i] == current){
                 run_length[pos]++;
-            else {
+            } else {
                 current = colors[i];
                 run_length[pos+1]=current;
                 run_length[pos+2]=1;
@@ -104,14 +105,16 @@ void bwsd(int *colors, short *reduced_LCP, int *coverage, int n, int k, double *
     }
     pos++; //size of run_lentgh
 
-    int *t = (int*)malloc(n*sizeof(int));
-    memset(t, 0, n*sizeof(int));
-    for(i = 0; i < pos; i+=2){
+    int *t = (int*) calloc((n+1), sizeof(int));
+    for(i = 0; i < pos; i+=2)
         t[run_length[i+1]]++;
-    }
+    
 
-    *expectation = bwsd_expectation(t, pos/2, n);
-    *entropy = bwsd_shannon_entropy(t, pos/2, n);
+    size_t s = pos/2;
+    *expectation = bwsd_expectation(t, s, n);
+    *entropy = bwsd_shannon_entropy(t, s, n);
+
+    free(run_length); free(t);
 }
 
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){
