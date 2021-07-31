@@ -117,7 +117,7 @@ int main(int argc, char *argv[]){
 
     // Computes SA, BWT, LCP and DA from both files
     for(i = 0; i < files_n; i++){
-        compute_file(path, files[i], k);
+       compute_file(path, files[i], k);
     }
 
     // Remove file format from the string
@@ -132,9 +132,9 @@ int main(int argc, char *argv[]){
     
     // Computes merge of files
     for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j], k);
-        }
+       for(j = i+1; j < files_n; j++){
+           compute_merge_files(path, files[i], files[j], k);
+       }
     }
 
     // Similarity matrix based on expectation
