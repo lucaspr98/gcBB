@@ -180,9 +180,9 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, int *C, 
                     }
                 }
                 // sort outgoing edges of vertex i in lexigraphic order 
-                // if(Wi_size > 1){
-                //      Wi_sort(W, Wm, colors, coverage, i-Wi_size, i);
-                // }
+                if(Wi_size > 1){
+                     Wi_sort(W, Wm, colors, coverage, i-Wi_size, i);
+                }
 
                 // clean frequency variables of outgoing edges in Wi 
                 memset(Wi_freq, 0, sizeof(int)*255);   

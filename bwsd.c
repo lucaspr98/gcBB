@@ -43,17 +43,18 @@ size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCover
     int repetitions = 0;
     int flip = primaryColor;
     while(repetitions <= secondaryCoverage){
+        pos++;
         rl_color[pos] = flip;
         rl_freq[pos] = 1;
-        pos++;
         flip = flip == primaryColor ? secondaryColor : primaryColor;
         repetitions++;
     }
     int remaining = primaryCoverage - repetitions;
-    // rl_color[pos] = primaryColor;
-    // rl_freq[pos] = remaining;
+    pos++;
+    rl_color[pos] = primaryColor;
+    rl_freq[pos] = remaining;
 
-    return pos++;
+    return pos;
 }
 
 void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem){
@@ -107,14 +108,27 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         }
 
         #if COVERAGE 
-        if(reduced_LCP[block_pos] > k && reduced_LCP[block_pos+1] > k && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
-            if(coverage[block_pos] >= coverage[block_pos+1]){
+        //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
+
+        //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
+        if(reduced_LCP[block_pos] == k+1 && reduced_LCP[block_pos+1] == k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
+            if(coverage[block_pos] > coverage[block_pos+1]){
                 pos = apply_coverage(colors[block_pos], colors[block_pos+1], coverage[block_pos], coverage[block_pos+1], rl_color, rl_freq, pos);
             } 
-            else {
+            else if(coverage[block_pos] < coverage[block_pos+1]) {
                 pos = apply_coverage(colors[block_pos], colors[block_pos+1], coverage[block_pos+1], coverage[block_pos], rl_color, rl_freq, pos);
+            } else {
+                int repetitions = 0;
+                while(repetitions < coverage[block_pos]){
+                    pos++;
+                    rl_color[pos] = coverage[block_pos];
+                    rl_freq[pos] = 1;
+                    pos++;
+                    rl_color[pos] = coverage[block_pos+1];
+                    rl_freq[pos] = 1;
+                    repetitions++;
+                }
             }
-            pos++;
         } else { 
         #endif
             if(colors[block_pos] == current){
@@ -144,7 +158,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     int *t = (int*) calloc((n+1), sizeof(int));
     for(i = 0; i < pos; i++)
         t[rl_freq[i]]++;
-    
 
     size_t s = pos/2;
     *expectation = bwsd_expectation(t, s, n);
