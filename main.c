@@ -176,7 +176,7 @@ int main(int argc, char *argv[]){
                 /******** Construct BOSS representation ********/
 
                 // BOSS construction needed variables
-                int *last, *Wm, *colors;
+                short *last, *Wm, *colors;
                 char *W;
                 int C[255] = {0};
                 int samples = 2;
@@ -192,18 +192,14 @@ int main(int argc, char *argv[]){
                     coverage[z] = 1;
 
                 // Initialize BOSS variables
-                last = (int*)malloc(n*sizeof(int));
-                Wm = (int*)malloc(n*sizeof(int));
-                colors = (int*)malloc(n*sizeof(int));
+                last = (short*)malloc(n*sizeof(short));
+                Wm = (short*)malloc(n*sizeof(short));
+                colors = (short*)malloc(n*sizeof(short));
                 W = (char*)malloc(n*sizeof(char));
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory);
-
-                // Print BOSS result
-                if(printBoss)
-                    print_boss_result(boss_len, files[i], files[j], C, last, W, Wm, colors, reduced_LCP, coverage, total_coverage);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory, files[i], files[j]);
                 
-                free(last);free(W);free(Wm);
+                free(last);free(W);free(Wm);free(reduced_LCP);free(colors);free(coverage);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);
@@ -213,12 +209,10 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(colors, reduced_LCP, coverage, boss_len, k, &expectation, &entropy, memory);
+                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory);
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
- 
-                free(reduced_LCP);free(colors);free(coverage);
             } else if (j == i){
                 Dm[i][j] = 0;
                 De[i][j] = 0;
@@ -262,7 +256,7 @@ void compute_merge_files(char *path, char *file1, char *file2, int k){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[256];
-        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k+1, file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k, file1, file2, file1, file2);
         system(eGapMerge);    
     } else 
         fclose(tmp);
