@@ -18,6 +18,5 @@ nohup.out
 erecta-yakuba
 
 tmp/
-results/
 validation/
-results-aux/
+results*/

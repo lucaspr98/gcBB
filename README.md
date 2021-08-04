@@ -13,12 +13,7 @@ cd gcBB
 
 ### eGap
 To construct the BOSS representation we will use the method described in [*External memory BWT and LCP computation for sequence collections with 
-applications*](https://doi.org/10.1186/s13015-019-0140-0). To compile eGap run the following commands:
-```sh
-cd egap
-make
-cd ../
-```
+applications*](https://doi.org/10.1186/s13015-019-0140-0). 
 The eGap repository comes within clone with flag `--recursive`
 
 ## Compile
@@ -47,9 +42,17 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ```
 **Example:**
 ```sh
-./gcBB dataset/ reads1.fastq reads2.fastq -p
+./gcBB dataset/ reads1.fastq reads2.fastq 
 ```
-In directory results, there will be two files, `reads1-reads2.boss` and `reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
+In directory results, there will be eight files: 
+-`reads1-reads2.boss-info`
+-`reads1-reads2.2.last`
+-`reads1-reads2.2.W`
+-`reads1-reads2.2.Wm`
+-`reads1-reads2.2.colors`
+-`reads1-reads2.4.coverage`
+-`reads1-reads2.2.reduced_lcp`
+-`reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
@@ -58,9 +61,9 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 ```
 **Example:**
 ```sh
-./gcBB influenza_dataset/ -p
+./gcBB influenza_dataset/
 ```
-In directory results, there will be _((N-1)*N/2)_ files containing all possible pair of genomes in the directory BOSS representation, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
+In directory results, there will be _8*((N-1)*N/2)*_ files containing all possible pair of genomes in the directory BOSS representations, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
 
 ### Command line options
 *-k*    
@@ -69,5 +72,3 @@ In directory results, there will be _((N-1)*N/2)_ files containing all possible 
 *-m*    
     specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
 
-*-p*    
-    print boss results in files. 
