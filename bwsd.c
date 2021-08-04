@@ -62,17 +62,17 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     size_t size = n+1;
     
-    short *rl_color = (short*)malloc(size*sizeof(short));
-    int *rl_freq = (int*)malloc(size*sizeof(int));
+    short *rl_color = (short*)calloc(size, sizeof(short));
+    int *rl_freq = (int*)calloc(size, sizeof(int));
 
     int current = 0;
     rl_color[0] = 0;
     rl_freq[0] = 0;
     size_t pos = 0;
 
-    short *colors = (short*)malloc((mem+2)*sizeof(short));
-    short *reduced_LCP = (short*)malloc((mem+2)*sizeof(short));
-    int *coverage = (int*)malloc((mem+2)*sizeof(int));
+    short *colors = (short*)calloc((mem+2), sizeof(short));
+    short *reduced_LCP = (short*)calloc((mem+2), sizeof(short));
+    int *coverage = (int*)calloc((mem+2), sizeof(int));
 
     char color_file_name[128];
     char reduced_LCP_file_name[128];
@@ -91,7 +91,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fread(coverage, sizeof(int), mem+1, coverage_file);
 
     int block_pos = 0;
-
+    
     for(i = 0; i < n; i++){
 
         if(i != 0 && i%mem == 0){
@@ -159,15 +159,17 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     for(i = 0; i < pos; i++)
         t[rl_freq[i]]++;
 
-    size_t s = pos/2;
-    *expectation = bwsd_expectation(t, s, n);
-    *entropy = bwsd_shannon_entropy(t, s, n);
-
-    free(rl_color); free(rl_freq); free(t);
+    free(rl_color); free(rl_freq); 
 
     fclose(colors_file);
     fclose(recuced_LCP_file);
     fclose(coverage_file);
+
+    size_t s = pos/2;
+    *expectation = bwsd_expectation(t, s, n);
+    *entropy = bwsd_shannon_entropy(t, s, n);
+
+    free(t);
 }
 
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){

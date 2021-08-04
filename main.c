@@ -16,7 +16,7 @@ void compute_merge_files(char *path, char *file1, char *file2, int k);
 
 int main(int argc, char *argv[]){
     int i, j, m;
-    char **files = (char**)malloc(32*sizeof(char*));
+    char **files = (char**)calloc(10, 32*sizeof(char*));
     int k = 30;
     int files_n = 0;
     char *path;
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
         struct dirent *entry;
         int len;
         path_len = strlen(argv[argc-1]);
-        path = (char*)malloc(path_len*sizeof(char));
+        path = (char*)malloc((path_len+1)*sizeof(char));
         strcpy(path, argv[argc-1]);
 
         folder = opendir(argv[argc-1]);
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]){
     } else if(argc-valid_opts == 4){
         int file_len;
         path_len = strlen(argv[argc-3]);
-        path = (char*)malloc(path_len*sizeof(char));
+        path = (char*)malloc((path_len+1)*sizeof(char));
         strcpy(path, argv[argc-3]);
 
         file_len = strlen(argv[argc-2]);
@@ -126,7 +126,6 @@ int main(int argc, char *argv[]){
         ptr = strchr(files[i], '.');
         if (ptr != NULL)
             *ptr = '\0';
-        printf("%s\n", files[i]);
     }
     
     // Computes merge of files
@@ -175,31 +174,9 @@ int main(int argc, char *argv[]){
 
                 /******** Construct BOSS representation ********/
 
-                // BOSS construction needed variables
-                short *last, *Wm, *colors;
-                char *W;
-                int C[255] = {0};
                 int samples = 2;
 
-                // Coverage information variables
-                int total_coverage = 0;
-                short *reduced_LCP;
-                int *coverage;
-
-                reduced_LCP = (short*)malloc(n*sizeof(short));
-                coverage = (int*)malloc(n*sizeof(int));
-                for(int z = 0; z < n; z++)
-                    coverage[z] = 1;
-
-                // Initialize BOSS variables
-                last = (short*)malloc(n*sizeof(short));
-                Wm = (short*)malloc(n*sizeof(short));
-                colors = (short*)malloc(n*sizeof(short));
-                W = (char*)malloc(n*sizeof(char));
-
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, C, last, W, Wm, colors, n, k, samples, reduced_LCP, coverage, &total_coverage, memory, files[i], files[j]);
-                
-                free(last);free(W);free(Wm);free(reduced_LCP);free(colors);free(coverage);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j]);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);
@@ -222,6 +199,18 @@ int main(int argc, char *argv[]){
 
     // Print BWSD results
     print_bwsd_matrixes(Dm, De, files, files_n, path);
+
+    // Free variables
+    for(i = 0; i < 32; i++) free(files[i]);
+    free(files);
+
+    for(i = 0; i < files_n; i++) free(Dm[i]);
+    free(Dm);
+
+    for(i = 0; i < files_n; i++) free(De[i]);
+    free(De);
+
+    free(path);
 
     // system("rm -rf tmp");
 }
