@@ -283,7 +283,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
 
     fprintf(bwsd_matrixes, "%d\n", files_n);
     for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s\t", files[i]);
+        fprintf(bwsd_matrixes, "%s", files[i]);
         for(j = 0; j < files_n; j++){
             if(j >= i)
                 fprintf(bwsd_matrixes, "\t%lf", Dm[i][j]);
@@ -298,7 +298,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
 
     fprintf(bwsd_matrixes, "%d\n", files_n);
     for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s\t", files[i]);
+        fprintf(bwsd_matrixes, "%s", files[i]);
         for(j = 0; j < files_n; j++){
             if(j >= i)
                 fprintf(bwsd_matrixes, "\t%lf", De[i][j]);
