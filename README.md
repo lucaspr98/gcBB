@@ -42,7 +42,7 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ```
 **Example:**
 ```sh
-./gcBB dataset/ reads1.fastq reads2.fastq 
+./gcBB dataset/ reads1.fastq reads2.fastq -p
 ```
 In directory results, there will be eight files: 
 -`reads1-reads2.boss-info`
@@ -61,7 +61,7 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 ```
 **Example:**
 ```sh
-./gcBB influenza_dataset/
+./gcBB influenza_dataset/ -p
 ```
 In directory results, there will be _8*((N-1)*N/2)*_ files containing all possible pair of genomes in the directory BOSS representations, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
 
@@ -72,3 +72,5 @@ In directory results, there will be _8*((N-1)*N/2)*_ files containing all possib
 *-m*    
     specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
 
+*-p*    
+    used to print BOSS files (last, w, wm, colors, coverage, reduced_LCP) in results directory.

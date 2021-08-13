@@ -83,7 +83,7 @@ void add_edge(char *W, short **last, short *colors, short *reduced_LCP, int freq
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
@@ -118,6 +118,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
     FILE *boss_last_file = fopen(boss_last, "wb");
     FILE *boss_w_file = fopen(boss_w, "wb");
     FILE *boss_wm_file = fopen(boss_wm, "wb");
+    
     FILE *boss_colors_file = fopen(boss_colors, "wb");
     FILE *boss_coverage_file = fopen(boss_coverage, "wb");
     FILE *boss_reduced_LCP_file = fopen(boss_reduced_LCP, "wb");
@@ -233,9 +234,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
             }
 
             // Write Wi in BOSS results files
-            fwrite(last, sizeof(short), Wi_size, boss_last_file);
-            fwrite(W, sizeof(char), Wi_size, boss_w_file);
-            fwrite(Wm, sizeof(short), Wi_size, boss_wm_file);
+            if(printBoss){
+                fwrite(last, sizeof(short), Wi_size, boss_last_file);
+                fwrite(W, sizeof(char), Wi_size, boss_w_file);
+                fwrite(Wm, sizeof(short), Wi_size, boss_wm_file);
+            }
+
+            // needed for bwsd computation
             fwrite(colors, sizeof(short), Wi_size, boss_colors_file);
             fwrite(coverage, sizeof(int), Wi_size, boss_coverage_file);
             fwrite(reduced_LCP, sizeof(short), Wi_size, boss_reduced_LCP_file);
@@ -284,9 +289,17 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
 
     // Close used files
     fclose(boss_info_file);
-    fclose(boss_last_file);
-    fclose(boss_w_file);
-    fclose(boss_wm_file);
+    
+    if(printBoss){
+        fclose(boss_last_file);
+        fclose(boss_w_file);
+        fclose(boss_wm_file);
+    } else {
+        remove(boss_last);
+        remove(boss_w);
+        remove(boss_wm);
+    }
+
     fclose(boss_colors_file);
     fclose(boss_coverage_file);
     fclose(boss_reduced_LCP_file);

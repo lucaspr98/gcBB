@@ -10,9 +10,9 @@
 #include "bwsd.h"
 #include "boss.h"
 
-void compute_file(char *path, char *file, int k);
+void compute_file(char *path, char *file);
 
-void compute_merge_files(char *path, char *file1, char *file2, int k);
+void compute_merge_files(char *path, char *file1, char *file2);
 
 int main(int argc, char *argv[]){
     int i, j, m;
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]){
 
     // Computes SA, BWT, LCP and DA from both files
     for(i = 0; i < files_n; i++){
-        compute_file(path, files[i], k);
+        compute_file(path, files[i]);
     }
 
     // Remove file format from the string
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]){
     // Computes merge of files
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j], k);
+            compute_merge_files(path, files[i], files[j]);
         }
     }
 
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]){
 
                 int samples = 2;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j]);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory);
+                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss);
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]){
     }    
 
     // Print BWSD results
-    print_bwsd_matrixes(Dm, De, files, files_n, path);
+    print_bwsd_matrixes(Dm, De, files, files_n, path, k);
 
     // Free variables
     for(i = 0; i < 32; i++) free(files[i]);
@@ -215,7 +215,7 @@ int main(int argc, char *argv[]){
     // system("rm -rf tmp");
 }
 
-void compute_file(char *path, char *file, int k){
+void compute_file(char *path, char *file){
     int len = strlen(file);
     char buff[len+1];
     strcpy(buff, file); 
@@ -235,7 +235,7 @@ void compute_file(char *path, char *file, int k){
         fclose(tmp);
 }
 
-void compute_merge_files(char *path, char *file1, char *file2, int k){
+void compute_merge_files(char *path, char *file1, char *file2){
     int len1 = strlen(file1); 
     int len2 = strlen(file2);
     int tmpSize = len1+len2+4;
@@ -245,7 +245,7 @@ void compute_merge_files(char *path, char *file1, char *file2, int k){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[256];
-        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --trlcp %d --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", k, file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --lcp --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
         system(eGapMerge);    
     } else 
         fclose(tmp);

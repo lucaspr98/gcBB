@@ -57,7 +57,7 @@ size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCover
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss){
     size_t i;
 
     size_t size = n+1;
@@ -111,7 +111,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
 
         //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
-        if(reduced_LCP[block_pos] == k+1 && reduced_LCP[block_pos+1] == k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
+        if(reduced_LCP[block_pos] >= k+1 && reduced_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
             if(coverage[block_pos] > coverage[block_pos+1]){
                 pos = apply_coverage(colors[block_pos], colors[block_pos+1], coverage[block_pos], coverage[block_pos+1], rl_color, rl_freq, pos);
             } 
@@ -165,6 +165,12 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(recuced_LCP_file);
     fclose(coverage_file);
 
+    if(!printBoss){
+        remove(color_file_name);
+        remove(reduced_LCP_file_name);
+        remove(coverage_file_name);
+    }
+
     size_t s = pos/2;
     *expectation = bwsd_expectation(t, s, n);
     *entropy = bwsd_shannon_entropy(t, s, n);
@@ -172,7 +178,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     free(t);
 }
 
-void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path){
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k){
     int i,j;
     char *ptr;
     char outputFile[128];
@@ -187,15 +193,15 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
             *ptr = '\0';
 
         #if COVERAGE
-            sprintf(outputFile, "results/%s_distance_matrixes_coverage_1.txt", folder);
+            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_1.txt", folder, k);
         #else
-            sprintf(outputFile, "results/%s_distance_matrixes_coverage_0.txt", folder);
+            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_0.txt", folder, k);
         #endif
     } else {
         #if COVERAGE
-            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_1.txt", files[0], files[1]);
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_1.txt", files[0], files[1], k);
         #else
-            sprintf(outputFile, "results/%s-%s_distance_matrixes_coverage_0.txt", files[0], files[1]);
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_0.txt", files[0], files[1], k);
         #endif
     }
     
