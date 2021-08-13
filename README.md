@@ -45,13 +45,21 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ./gcBB dataset/ reads1.fastq reads2.fastq -p
 ```
 In directory results, there will be eight files: 
+
 -`reads1-reads2.boss-info`
+
 -`reads1-reads2.2.last`
+
 -`reads1-reads2.2.W`
+
 -`reads1-reads2.2.Wm`
+
 -`reads1-reads2.2.colors`
+
 -`reads1-reads2.4.coverage`
+
 -`reads1-reads2.2.reduced_lcp`
+
 -`reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
 
 ### Genome collection comparison
