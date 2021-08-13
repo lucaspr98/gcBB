@@ -12,7 +12,7 @@ all: $(TARGET)
 	make -C egap/
 
 $(TARGET): $(OBJFILES)
-	$(CC) -g -O0 -o $(TARGET) $(OBJFILES) -lm
+	$(CC) -o $(TARGET) $(OBJFILES) -lm -g -O0
 
 boss.o: boss.c boss.h
 	$(CC) $(CFLAGS) boss.c -o boss.o
