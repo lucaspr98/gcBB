@@ -9,3 +9,4 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
    2: last outgoing edge from a set
  */
 void add_edge(char *W, short **last, short *colors, short *reduced_LCP, int freq, short *Wm, char bwt, int da, short lcp, int Wi_size, int edge_status);
+

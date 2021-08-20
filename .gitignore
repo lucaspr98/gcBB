@@ -13,6 +13,10 @@ readbin
 da.c
 docs.c
 
+nohup.out
+
+erecta-yakuba
+
 tmp/
 validation/
 results*/
