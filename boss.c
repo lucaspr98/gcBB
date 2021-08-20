@@ -3,6 +3,8 @@
 #include <string.h>
 #include "boss.h"
 
+#define FILE_PATH 1024
+
 void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int end){
     int i;
     int range = end-start;
@@ -98,15 +100,15 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
     fread(LCP, sizeof(short), mem+1, mergeLCP);
     fread(DA, sizeof(char), mem, mergeDA);
     fread(BWT, sizeof(char), mem, mergeBWT);
-    for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
+    for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
 
     // BOSS result files
-    char boss_last[128];
-    char boss_w[128];
-    char boss_wm[128];
-    char boss_colors[128];
-    char boss_coverage[128];
-    char boss_reduced_LCP[128];
+    char boss_last[FILE_PATH];
+    char boss_w[FILE_PATH];
+    char boss_wm[FILE_PATH];
+    char boss_colors[FILE_PATH];
+    char boss_coverage[FILE_PATH];
+    char boss_reduced_LCP[FILE_PATH];
 
     sprintf(boss_last, "results/%s-%s.2.last", file1, file2);
     sprintf(boss_w, "results/%s-%s.1.W", file1, file2);
@@ -151,9 +153,9 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
         if(bi != 0 && bi%mem == 0){
             fseek(mergeLCP, -2L, SEEK_CUR);
             fread(LCP, sizeof(short), mem+1, mergeLCP);
-            fread(DA, 1, mem, mergeDA);
+            fread(DA, sizeof(char), mem, mergeDA);
             fread(BWT, sizeof(char), mem, mergeBWT);
-            for(j = 0; j < mem; j++) BWT[j] = BWT[j] == 0 ? '$' : BWT[j];
+            for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
             
             block_pos = 0;
         }
@@ -271,9 +273,9 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
 
     // Print BOSS construction info
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    char boss_info[128];
+    char boss_info[FILE_PATH];
     
-    sprintf(boss_info, "results/%s-%s.boss-info", file1, file2);
+    sprintf(boss_info, "results/%s-%s_k_%d.boss-info", file1, file2, k);
     
     FILE *boss_info_file = fopen(boss_info, "w");
                 

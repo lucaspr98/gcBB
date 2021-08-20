@@ -10,6 +10,8 @@
 #include "bwsd.h"
 #include "boss.h"
 
+#define FILE_PATH 1024
+
 void compute_file(char *path, char *file);
 
 void compute_merge_files(char *path, char *file1, char *file2);
@@ -130,7 +132,7 @@ int main(int argc, char *argv[]){
     
     // Computes merge of files
     for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
+        for(j = i; j < files_n; j++){
             compute_merge_files(path, files[i], files[j]);
         }
     }
@@ -155,10 +157,10 @@ int main(int argc, char *argv[]){
 
     for(i = 0; i < files_n; i++){
         for(j = 0; j < files_n; j++){
-            if(j > i){
-                char mergeBWTFile[128];
-                char mergeLCPFile[128];
-                char mergeDAFile[128];
+            if(j >= i){
+                char mergeBWTFile[FILE_PATH];
+                char mergeLCPFile[FILE_PATH];
+                char mergeDAFile[FILE_PATH];
 
                 sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
                 sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
@@ -173,7 +175,6 @@ int main(int argc, char *argv[]){
                 rewind(mergeBWT);
 
                 /******** Construct BOSS representation ********/
-
                 int samples = 2;
 
                 size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss);
@@ -190,9 +191,6 @@ int main(int argc, char *argv[]){
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
-            } else if (j == i){
-                Dm[i][j] = 0;
-                De[i][j] = 0;
             }
         }
     }    
@@ -211,8 +209,6 @@ int main(int argc, char *argv[]){
     free(De);
 
     free(path);
-
-    // system("rm -rf tmp");
 }
 
 void compute_file(char *path, char *file){
@@ -228,7 +224,7 @@ void compute_file(char *path, char *file){
     sprintf(output, "tmp/%s.bwt", file);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
-        char eGap[256];
+        char eGap[FILE_PATH];
         sprintf(eGap, "egap/eGap %s%s -m 12288 --em --rev --lcp -o tmp/%s", path, buff, file);
         system(eGap);    
     } else
@@ -244,7 +240,7 @@ void compute_merge_files(char *path, char *file1, char *file2){
     sprintf(output, "tmp/merge.%s-%s.bwt", file1, file2);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
-        char eGapMerge[256];
+        char eGapMerge[FILE_PATH];
         sprintf(eGapMerge, "egap/eGap -m 12288 --em --bwt --lcp --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
         system(eGapMerge);    
     } else 

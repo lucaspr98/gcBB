@@ -1,7 +1,7 @@
 
 void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss);
 
-size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCoverage, int secondaryCoverage, short *rl_color, int *rl_freq, size_t pos);
+size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCoverage, int secondaryCoverage, int *rl_freq, size_t pos);
 
 double bwsd_expectation(int *t, int s, int n);
 
