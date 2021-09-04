@@ -13,6 +13,8 @@ readbin
 da.c
 docs.c
 
+*.sh
+
 nohup.out
 
 erecta-yakuba

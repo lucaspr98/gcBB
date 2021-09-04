@@ -5,6 +5,8 @@
 #include <libgen.h>
 #include "bwsd.h"
 
+#define FILE_PATH 1024
+
 #ifndef COVERAGE
 	#define COVERAGE 0
 #endif
@@ -122,10 +124,8 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
                 int repetitions = 0;
                 while(repetitions < coverage[block_pos]){
                     pos++;
-                    rl_color[pos] = coverage[block_pos];
                     rl_freq[pos] = 1;
                     pos++;
-                    rl_color[pos] = coverage[block_pos+1];
                     rl_freq[pos] = 1;
                     repetitions++;
                 }
@@ -156,9 +156,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     }
 
     // check if sum rl_freq = n;
-    // size_t sum_freq = 0;
-    // for(i = 0; i < pos; i++)
-    //     sum_freq += rl_freq[i];
+    size_t sum_freq = 0;
+    for(i = 0; i < pos; i++)
+        sum_freq += rl_freq[i];
     // printf("diff n - sum_freq = %ld\n", n-sum_freq);
 
     free(colors); free(coverage); free(reduced_LCP);
@@ -176,6 +176,34 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(recuced_LCP_file);
     fclose(coverage_file);
 
+    char info[FILE_PATH];
+    
+    #if COVERAGE
+        sprintf(info, "results/%s-%s_k_%d_coverage_1.info", file1, file2, k);
+    #else
+        sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
+    #endif
+
+    FILE *info_file = fopen(info, "w");
+
+    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n", file1, file2);
+
+    fprintf(info_file, "n = %ld\n", n);
+    fprintf(info_file, "sum frequencies = %ld\n", sum_freq);
+    fprintf(info_file, "n-sum_frequencies = %ld\n\n", n-sum_freq);
+
+    fprintf(info_file, "s = %ld\n", pos);
+
+    fprintf(info_file, "terms: \n");
+
+    for(i = 0; i < max_freq+1; i++){
+        if(t[i] != 0){
+            fprintf(info_file, "t_%ld = %d\n", i, t[i]);
+        }
+    }
+
+    fprintf(info_file, "\n");
+
     if(!printBoss){
         remove(color_file_name);
         remove(reduced_LCP_file_name);
@@ -184,6 +212,11 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     *expectation = bwsd_expectation(t, pos, max_freq);
     *entropy = bwsd_shannon_entropy(t, pos, max_freq);
+
+    fprintf(info_file, "expectation = %lf\n", *expectation);
+    fprintf(info_file, "entropy = %lf\n", *entropy);
+
+    fclose(info_file);
 
     free(t);
 }

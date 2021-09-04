@@ -5,6 +5,10 @@
 
 #define FILE_PATH 1024
 
+#ifndef COVERAGE
+	#define COVERAGE 0
+#endif
+
 void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int end){
     int i;
     int range = end-start;
@@ -273,24 +277,28 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
 
     // Print BOSS construction info
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    char boss_info[FILE_PATH];
+    char info[FILE_PATH];
     
-    sprintf(boss_info, "results/%s-%s_k_%d.boss-info", file1, file2, k);
+    #if COVERAGE
+        sprintf(info, "results/%s-%s_k_%d_coverage_1.info", file1, file2, k);
+    #else
+        sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
+    #endif
     
-    FILE *boss_info_file = fopen(boss_info, "w");
+    FILE *info_file = fopen(info, "w");
                 
-    fprintf(boss_info_file, "Boss construction of %s and %s genomes merge:\n", file1, file2);
-    fprintf(boss_info_file, "C array:\n");
+    fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n", file1, file2);
+    fprintf(info_file, "C array:\n");
     for(j = 0; j < 6; j++)
-        fprintf(boss_info_file, "%c %d\n", alphabet[j], C[j]);
-    fprintf(boss_info_file, "\n");
+        fprintf(info_file, "%c %d\n", alphabet[j], C[j]);
+    fprintf(info_file, "\n");
 
-    fprintf(boss_info_file, "Boss length: %ld\n\n", i);
+    fprintf(info_file, "Boss length: %ld\n\n", i);
 
-    fprintf(boss_info_file, "Total coverage: %ld\n\n", total_coverage);
+    fprintf(info_file, "Total coverage: %ld\n\n", total_coverage);
 
     // Close used files
-    fclose(boss_info_file);
+    fclose(info_file);
     
     if(printBoss){
         fclose(boss_last_file);
