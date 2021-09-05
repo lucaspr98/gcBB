@@ -196,7 +196,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     char info[FILE_PATH];
     
     #if COVERAGE
-        sprintf(info, "results/%s-%s_k_%d_coverage_1.info", file1, file2, k);
+        sprintf(info, "results/%s-%s_k_%d_coverage_1_%c.info", file1, file2, k, coverage_type);
     #else
         sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
     #endif

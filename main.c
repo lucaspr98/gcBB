@@ -184,7 +184,7 @@ int main(int argc, char *argv[]){
                 /******** Construct BOSS representation ********/
                 int samples = 2;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss, coverage_type);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);

@@ -89,7 +89,7 @@ void add_edge(char *W, short **last, short *colors, short *reduced_LCP, int freq
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
@@ -280,7 +280,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
     char info[FILE_PATH];
     
     #if COVERAGE
-        sprintf(info, "results/%s-%s_k_%d_coverage_1.info", file1, file2, k);
+        sprintf(info, "results/%s-%s_k_%d_coverage_1_%c.info", file1, file2, k, coverage_type);
     #else
         sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
     #endif
