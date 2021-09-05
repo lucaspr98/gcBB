@@ -155,7 +155,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n
 
         // read next block
         if(bi != 0 && bi%mem == 0){
-            fseek(mergeLCP, -2L, SEEK_CUR);
+            fseek(mergeLCP, -sizeof(short), SEEK_CUR);
             fread(LCP, sizeof(short), mem+1, mergeLCP);
             fread(DA, sizeof(char), mem, mergeDA);
             fread(BWT, sizeof(char), mem, mergeBWT);

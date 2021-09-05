@@ -45,13 +45,11 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 
 }
 
-size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCoverage, int secondaryCoverage, int *rl_freq, size_t pos){
+size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, int *rl_freq, size_t pos){
     int repetitions = 0;
-    int flip = primaryColor;
     while(repetitions <= secondaryCoverage){
         pos++;
         rl_freq[pos] = 1;
-        flip = flip == primaryColor ? secondaryColor : primaryColor;
         repetitions++;
     }
     int remaining = primaryCoverage - repetitions;
@@ -61,7 +59,7 @@ size_t apply_coverage(short primaryColor, short secondaryColor, int primaryCover
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type){
     size_t i;
 
     size_t size = n+1;
@@ -114,12 +112,16 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
 
         //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
-        if(reduced_LCP[block_pos] >= k+1 && reduced_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
+        if(coverage_type == 'e' && reduced_LCP[block_pos] >= k+1 && reduced_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
             if(coverage[block_pos] > coverage[block_pos+1]){
-                pos = apply_coverage(colors[block_pos], colors[block_pos+1], coverage[block_pos], coverage[block_pos+1], rl_freq, pos);
+                pos = apply_coverage_merge(coverage[block_pos], coverage[block_pos+1], rl_freq, pos);
+                if(rl_freq[pos] > max_freq)
+                    max_freq = rl_freq[pos];
             } 
             else if(coverage[block_pos] < coverage[block_pos+1]) {
-                pos = apply_coverage(colors[block_pos], colors[block_pos+1], coverage[block_pos+1], coverage[block_pos], rl_freq, pos);
+                pos = apply_coverage_merge(coverage[block_pos+1], coverage[block_pos], rl_freq, pos);
+                if(rl_freq[pos] > max_freq)
+                    max_freq = rl_freq[pos];
             } else {
                 int repetitions = 0;
                 while(repetitions < coverage[block_pos]){
@@ -130,10 +132,25 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
                     repetitions++;
                 }
             }
+        } else if (coverage_type == 'd' && reduced_LCP[block_pos] != reduced_LCP[block_pos+1]) {
+            if(colors[block_pos] == current)
+                rl_freq[pos] += coverage[block_pos];
+            else {
+                if(rl_freq[pos] > max_freq)
+                    max_freq = rl_freq[pos];
+
+                current = colors[block_pos];
+                pos++;
+                rl_freq[pos]=1;
+            }
         } else { 
         #endif
             if(colors[block_pos] == current){
                 rl_freq[pos]++;
+                #if COVERAGE
+                    if(coverage_type == 'a')
+                        rl_freq[pos] += coverage[block_pos]-1;
+                #endif
             } else {
                 if(rl_freq[pos] > max_freq)
                     max_freq = rl_freq[pos];
@@ -221,7 +238,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     free(t);
 }
 
-void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k){
+void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type){
     int i,j;
     char *ptr;
     char outputFile[128];
@@ -236,13 +253,13 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
             *ptr = '\0';
 
         #if COVERAGE
-            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_1.txt", folder, k);
+            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_1_%c.txt", folder, k, coverage_type);
         #else
             sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_0.txt", folder, k);
         #endif
     } else {
         #if COVERAGE
-            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_1.txt", files[0], files[1], k);
+            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_1_%c.txt", files[0], files[1], k, coverage_type);
         #else
             sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_0.txt", files[0], files[1], k);
         #endif

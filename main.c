@@ -25,12 +25,13 @@ int main(int argc, char *argv[]){
     int path_len;
     int opt;
     int memory = 1000;
+    char coverage_type = 'a';
     int printBoss = 0;
 
     /******** Check arguments ********/
 
     int valid_opts = 0;
-    while ((opt = getopt (argc, argv, "pk:m:")) != -1){
+    while ((opt = getopt (argc, argv, "pk:m:c:")) != -1){
         switch (opt){
             case 'p':
                 valid_opts+=1;
@@ -44,11 +45,17 @@ int main(int argc, char *argv[]){
                 valid_opts += 2;
                 memory = atoi(optarg);
                 break;
+            case 'c':
+                valid_opts += 2;
+                coverage_type = *optarg;
+                break;
             case '?':
                 if(opt == 'k')
                     fprintf (stderr, "Option -%c requires a integer value.\n", opt);
                 else if(opt == 'm')
                     fprintf (stderr, "Option -%c requires a integer value.\n", opt);
+                else if(opt == 'c')
+                    fprintf (stderr, "Option -%c requires one of the following options:\n'a': always apply coverage\n'e': apply coverage on same k-mers of distinct genomes\n'd': apply coverage in distinct k-mers", opt);
                 else if (isprint (opt))
                     fprintf (stderr, "Unknown option `-%c'.\n", opt);
                 else
@@ -187,7 +194,7 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss);
+                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type);
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;
@@ -196,7 +203,7 @@ int main(int argc, char *argv[]){
     }    
 
     // Print BWSD results
-    print_bwsd_matrixes(Dm, De, files, files_n, path, k);
+    print_bwsd_matrixes(Dm, De, files, files_n, path, k, coverage_type);
 
     // Free variables
     for(i = 0; i < 32; i++) free(files[i]);

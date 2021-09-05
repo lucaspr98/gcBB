@@ -9,7 +9,9 @@
         "stdlib.h": "c",
         "string.h": "c",
         "bwsd.h": "c",
-        "random": "c"
+        "random": "c",
+        "iosfwd": "cpp",
+        "iostream": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
