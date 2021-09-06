@@ -148,7 +148,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             if(colors[block_pos] == current){
                 rl_freq[pos]++;
                 #if COVERAGE
-                    if(coverage_type == 'a')
+                    if(coverage_type == 'a' || (coverage_type == 'd' && reduced_LCP[block_pos] != reduced_LCP[block_pos+1]))
                         rl_freq[pos] += coverage[block_pos]-1;
                 #endif
             } else {
@@ -201,7 +201,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
     #endif
 
-    FILE *info_file = fopen(info, "w");
+    FILE *info_file = fopen(info, "w+");
 
     fprintf(info_file, "BWSD info of %s and %s genomes merge:\n", file1, file2);
 
