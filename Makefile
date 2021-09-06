@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c -std=gnu99 
+CFLAGS = -g -O0 -c -std=gnu99 
 OBJFILES = main.o boss.o bwsd.o
 TARGET = gcBB
 
@@ -12,10 +12,10 @@ all: $(TARGET)
 	make -C egap/
 
 $(TARGET): $(OBJFILES)
-	$(CC) -o $(TARGET) $(OBJFILES) -lm -g -O0
+	$(CC) -o $(TARGET) $(OBJFILES) -lm 
 
 boss.o: boss.c boss.h
-	$(CC) $(CFLAGS) boss.c -o boss.o
+	$(CC) $(CFLAGS) $(DEFINES) boss.c -o boss.o
 
 bwsd.o: bwsd.c bwsd.h
 	$(CC) $(CFLAGS) $(DEFINES) bwsd.c -o bwsd.o

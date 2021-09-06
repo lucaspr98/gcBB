@@ -184,7 +184,9 @@ int main(int argc, char *argv[]){
                 /******** Construct BOSS representation ********/
                 int samples = 2;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss, coverage_type);
+                size_t total_coverage = 0;
+
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);
@@ -194,7 +196,7 @@ int main(int argc, char *argv[]){
                 double expectation, entropy;
                 expectation = entropy = 0;
 
-                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type);
+                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
 
                 Dm[i][j] = expectation;
                 De[i][j] = entropy;

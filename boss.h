@@ -1,7 +1,7 @@
 
 void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int end);
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type);
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type, size_t *total_coverage);
 
 /* edge_status:
    0: any outgoing edge besides the last one

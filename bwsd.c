@@ -52,17 +52,25 @@ size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, int *rl_
         rl_freq[pos] = 1;
         repetitions++;
     }
-    int remaining = primaryCoverage - repetitions;
+    int remaining = primaryCoverage - repetitions + 1;
     pos++;
     rl_freq[pos] = remaining;
 
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage){
     size_t i;
 
-    size_t size = n+1;
+    #if COVERAGE
+        size_t size = total_coverage+1;
+    #else
+       size_t size = n+1;
+    #endif
+
+
+    printf("size: %ld\n\n", size);
+
     int *rl_freq = (int*)calloc(size, sizeof(int));
     int max_freq = 0;
 
@@ -132,17 +140,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
                     repetitions++;
                 }
             }
-        } else if (coverage_type == 'd' && reduced_LCP[block_pos] != reduced_LCP[block_pos+1]) {
-            if(colors[block_pos] == current)
-                rl_freq[pos] += coverage[block_pos];
-            else {
-                if(rl_freq[pos] > max_freq)
-                    max_freq = rl_freq[pos];
-
-                current = colors[block_pos];
-                pos++;
-                rl_freq[pos]=1;
-            }
         } else { 
         #endif
             if(colors[block_pos] == current){
@@ -170,7 +167,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     if(colors[block_pos-1] == 0){
         pos++;
         rl_freq[pos] = 0;
-    }
+    } 
 
     // check if sum rl_freq = n;
     size_t sum_freq = 0;
@@ -181,9 +178,12 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     free(colors); free(coverage); free(reduced_LCP);
 
     // computes every t_(k_j), where 1 <= j <= max_freq
-    int *t = (int*) calloc((max_freq+1), sizeof(int));
-    for(i = 1; i < pos; i++)
+    int *t = (int*) calloc((max_freq+4), sizeof(int));
+    printf("max: %d\n", max_freq);
+    for(i = 1; i < pos; i++){
+        if(rl_freq[i] > max_freq) printf("aqui: %d\n", rl_freq[i]);
         t[rl_freq[i]]++;
+    }
 
     //sum termos
 
@@ -201,13 +201,21 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
     #endif
 
-    FILE *info_file = fopen(info, "w+");
+    FILE *info_file = fopen(info, "a+");
 
     fprintf(info_file, "BWSD info of %s and %s genomes merge:\n", file1, file2);
 
-    fprintf(info_file, "n = %ld\n", n);
+    #if COVERAGE
+        fprintf(info_file, "total_coverage = %ld\n", total_coverage);
+    #else
+        fprintf(info_file, "n = %ld\n", n);
+    #endif
     fprintf(info_file, "sum frequencies = %ld\n", sum_freq);
-    fprintf(info_file, "n-sum_frequencies = %ld\n\n", n-sum_freq);
+    #if COVERAGE
+        fprintf(info_file, "total_coverage-sum_frequencies = %ld\n\n", total_coverage-sum_freq);
+    #else   
+        fprintf(info_file, "n-sum_frequencies = %ld\n\n", n-sum_freq);
+    #endif
 
     fprintf(info_file, "s = %ld\n", pos);
 
