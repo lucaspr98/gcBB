@@ -12,6 +12,7 @@ readbin.c
 readbin
 da.c
 docs.c
+single_read_boss.c
 
 *.sh
 

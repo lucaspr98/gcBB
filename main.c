@@ -168,14 +168,17 @@ int main(int argc, char *argv[]){
                 char mergeBWTFile[FILE_PATH];
                 char mergeLCPFile[FILE_PATH];
                 char mergeDAFile[FILE_PATH];
+                char mergeSLFile[FILE_PATH];
 
                 sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
                 sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
                 sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
+                sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
 
                 FILE *mergeBWT = fopen(mergeBWTFile, "r");
                 FILE *mergeLCP = fopen(mergeLCPFile, "rb");
                 FILE *mergeDA = fopen(mergeDAFile, "rb");
+                FILE *mergeSL = fopen(mergeSLFile, "rb");
 
                 fseek(mergeBWT, 0, SEEK_END);
                 size_t n = ftell(mergeBWT);
@@ -186,7 +189,7 @@ int main(int argc, char *argv[]){
 
                 size_t total_coverage = 0;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
 
                 fclose(mergeBWT);
                 fclose(mergeLCP);
@@ -234,7 +237,7 @@ void compute_file(char *path, char *file){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGap[FILE_PATH];
-        sprintf(eGap, "egap/eGap %s%s -m 52000 --em --rev --lcp -o tmp/%s", path, buff, file);
+        sprintf(eGap, "egap/eGap %s%s -m 52000 --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, file);
         system(eGap);    
     } else
         fclose(tmp);
@@ -250,7 +253,7 @@ void compute_merge_files(char *path, char *file1, char *file2){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
-        sprintf(eGapMerge, "egap/eGap -m 52000 --em --bwt --lcp --cda --cbytes 1 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m 52000 --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
         system(eGapMerge);    
     } else 
         fclose(tmp);

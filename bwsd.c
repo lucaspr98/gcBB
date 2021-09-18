@@ -11,6 +11,11 @@
 	#define COVERAGE 0
 #endif
 
+#ifndef FILTER_CONTEXT
+	#define FILTER_CONTEXT 0
+#endif
+
+
 //max length para o tamanho do arquivo
 
 double bwsd_expectation(int *t, int s, int n){
@@ -19,7 +24,7 @@ double bwsd_expectation(int *t, int s, int n){
     double frac;
     
     //go to max_t
-	for(i = 1; i < n; i++){
+	for(i = 1; i < n+1; i++){
         if(t[i] != 0){
             frac = (double)t[i]/s;
             value += i*frac;
@@ -34,7 +39,7 @@ double bwsd_shannon_entropy(int *t, int s, int n){
 	double value = 0.0;
 	
     //go to max_t
-    for(i = 1; i < n; i++){
+    for(i = 1; i < n+1; i++){
         if(t[i] != 0){
             double frac = (double)t[i]/(double)s;
             value += frac*log2(frac);
@@ -69,7 +74,34 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     #endif
 
 
-    printf("size: %ld\n\n", size);
+    // printf("size: %ld\n\n", size);
+
+    short *colors = (short*)calloc((mem+2), sizeof(short));
+    short *summarized_LCP = (short*)calloc((mem+2), sizeof(short));
+    short *summarized_SL = (short*)calloc((mem+2), sizeof(short));
+    int *coverage = (int*)calloc((mem+2), sizeof(int));
+
+    char color_file_name[FILE_PATH];
+    char summarized_LCP_file_name[FILE_PATH];
+    char summarized_SL_file_name[FILE_PATH];
+    char coverage_file_name[FILE_PATH];
+
+    sprintf(color_file_name, "results/%s-%s.2.colors", file1, file2);
+    sprintf(summarized_LCP_file_name, "results/%s-%s.2.summarized_LCP", file1, file2);
+    sprintf(summarized_SL_file_name, "results/%s-%s.2.summarized_SL", file1, file2);
+    sprintf(coverage_file_name, "results/%s-%s.4.coverage", file1, file2);
+    
+    FILE *colors_file = fopen(color_file_name, "rb");
+    FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
+    FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
+    FILE *coverage_file = fopen(coverage_file_name, "rb");
+
+    fread(colors, sizeof(short), mem+1, colors_file);
+    fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
+    fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
+    fread(coverage, sizeof(int), mem+1, coverage_file);
+
+
 
     int *rl_freq = (int*)calloc(size, sizeof(int));
     int max_freq = 0;
@@ -77,27 +109,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     int current = 0;
     rl_freq[0] = 0;
     size_t pos = 0; // size of run_length
-
-    short *colors = (short*)calloc((mem+2), sizeof(short));
-    short *reduced_LCP = (short*)calloc((mem+2), sizeof(short));
-    int *coverage = (int*)calloc((mem+2), sizeof(int));
-
-    char color_file_name[128];
-    char reduced_LCP_file_name[128];
-    char coverage_file_name[128];
-
-    sprintf(color_file_name, "results/%s-%s.2.colors", file1, file2);
-    sprintf(reduced_LCP_file_name, "results/%s-%s.2.reduced_lcp", file1, file2);
-    sprintf(coverage_file_name, "results/%s-%s.4.coverage", file1, file2);
-    
-    FILE *colors_file = fopen(color_file_name, "rb");
-    FILE *recuced_LCP_file = fopen(reduced_LCP_file_name, "rb");
-    FILE *coverage_file = fopen(coverage_file_name, "rb");
-
-    fread(colors, sizeof(short), mem+1, colors_file);
-    fread(reduced_LCP, sizeof(short), mem+1, colors_file);
-    fread(coverage, sizeof(int), mem+1, coverage_file);
-
     int block_pos = 0;
     
     for(i = 0; i < n; i++){
@@ -107,8 +118,11 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             fseek(colors_file, -sizeof(short), SEEK_CUR);
             fread(colors, sizeof(short), mem+1, colors_file);
 
-            fseek(recuced_LCP_file, -sizeof(short), SEEK_CUR);
-            fread(reduced_LCP, sizeof(short), mem+1, recuced_LCP_file);
+            fseek(summarized_LCP_file, -sizeof(short), SEEK_CUR);
+            fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
+
+            fseek(summarized_SL_file, -sizeof(short), SEEK_CUR);
+            fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
 
             fseek(coverage_file, -sizeof(int), SEEK_CUR);
             fread(coverage, sizeof(int), mem+1, coverage_file);
@@ -120,7 +134,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
 
         //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
-        if(coverage_type == 'e' && reduced_LCP[block_pos] >= k+1 && reduced_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
+        if(coverage_type == 'e' && summarized_LCP[block_pos] >= k+1 && summarized_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
             if(coverage[block_pos] > coverage[block_pos+1]){
                 pos = apply_coverage_merge(coverage[block_pos], coverage[block_pos+1], rl_freq, pos);
                 if(rl_freq[pos] > max_freq)
@@ -142,55 +156,58 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             }
         } else { 
         #endif
-            if(colors[block_pos] == current){
-                rl_freq[pos]++;
-                #if COVERAGE
-                    if(coverage_type == 'a' || (coverage_type == 'd' && reduced_LCP[block_pos] != reduced_LCP[block_pos+1]))
-                        rl_freq[pos] += coverage[block_pos]-1;
-                #endif
-            } else {
-                if(rl_freq[pos] > max_freq)
-                    max_freq = rl_freq[pos];
+            #if FILTER_CONTEXT
+            if(summarized_SL[block_pos] > k){
+            #endif
+                if(colors[block_pos] == current){
+                    rl_freq[pos]++;
+                    #if COVERAGE
+                        if(coverage_type == 'a' || (coverage_type == 'd' && summarized_LCP[block_pos] != summarized_LCP[block_pos+1]))
+                            rl_freq[pos] += coverage[block_pos]-1;
+                    #endif
+                } else {
+                    if(rl_freq[pos] > max_freq)
+                        max_freq = rl_freq[pos];
 
-                current = colors[block_pos];
-                pos++;
-                rl_freq[pos]=1;
+                    current = colors[block_pos];
+                    pos++;
+                    rl_freq[pos]=1;
+                }
+            #if FILTER_CONTEXT
             }
+            #endif
         #if COVERAGE
         }
         #endif
 
         block_pos++;
     }
+    pos++;
 
     // if last color == 0, add 1^0
     if(colors[block_pos-1] == 0){
-        pos++;
         rl_freq[pos] = 0;
+        pos++;
     } 
 
     // check if sum rl_freq = n;
     size_t sum_freq = 0;
     for(i = 0; i < pos; i++)
         sum_freq += rl_freq[i];
-    // printf("diff n - sum_freq = %ld\n", n-sum_freq);
 
-    free(colors); free(coverage); free(reduced_LCP);
+    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
 
     // computes every t_(k_j), where 1 <= j <= max_freq
     int *t = (int*) calloc((max_freq+4), sizeof(int));
-    printf("max: %d\n", max_freq);
-    for(i = 1; i < pos; i++){
-        if(rl_freq[i] > max_freq) printf("aqui: %d\n", rl_freq[i]);
-        t[rl_freq[i]]++;
+    for(i = 0; i < pos; i++){
+        if(rl_freq[i] > 0) t[rl_freq[i]]++;
     }
 
     //sum termos
 
-    free(rl_freq); 
-
     fclose(colors_file);
-    fclose(recuced_LCP_file);
+    fclose(summarized_LCP_file);
+    fclose(summarized_SL_file);
     fclose(coverage_file);
 
     char info[FILE_PATH];
@@ -231,12 +248,20 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     if(!printBoss){
         remove(color_file_name);
-        remove(reduced_LCP_file_name);
+        remove(summarized_LCP_file_name);
+        remove(summarized_SL_file_name);
         remove(coverage_file_name);
     }
 
-    *expectation = bwsd_expectation(t, pos, max_freq);
-    *entropy = bwsd_shannon_entropy(t, pos, max_freq);
+    size_t s = pos;
+
+    if(rl_freq[0] == 0) s--;
+    if(rl_freq[pos-1] == 0) s--;
+
+    free(rl_freq); 
+
+    *expectation = bwsd_expectation(t, s, max_freq);
+    *entropy = bwsd_shannon_entropy(t, s, max_freq);
 
     fprintf(info_file, "expectation = %lf\n", *expectation);
     fprintf(info_file, "entropy = %lf\n", *entropy);
@@ -249,7 +274,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type){
     int i,j;
     char *ptr;
-    char outputFile[128];
+    char outputFile[FILE_PATH];
 
     int len = strlen(path);
     char folder[len];
