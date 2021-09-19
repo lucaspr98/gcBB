@@ -285,17 +285,35 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
         if (ptr != NULL)
             *ptr = '\0';
 
+        sprintf(outputFile, "results/%s_distance_matrixes_k_%d", folder, k);
+
+
+        char coverage_arg[FILE_PATH];
         #if COVERAGE
-            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_1_%c.txt", folder, k, coverage_type);
+            sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+            strcat(outputFile, coverage_arg);
         #else
-            sprintf(outputFile, "results/%s_distance_matrixes_k_%d_coverage_0.txt", folder, k);
+            strcat(outputFile, "_coverage_0");
         #endif
+
+        #if FILTER_CONTEXT
+            strcat(outputFile, "_filtered");
+        #endif
+
+        strcat(outputFile, ".txt");
+
     } else {
+        sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d", files[0], files[1], k);            
+
+        char coverage_arg[FILE_PATH];
         #if COVERAGE
-            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_1_%c.txt", files[0], files[1], k, coverage_type);
+            sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+            strcat(outputFile, coverage_arg);
         #else
-            sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d_coverage_0.txt", files[0], files[1], k);
+            strcat(outputFile, "_coverage_0");
         #endif
+
+        strcat(outputFile, ".txt");
     }
     
 
