@@ -9,6 +9,10 @@
 	#define COVERAGE 0
 #endif
 
+#ifndef FILTER_CONTEXT
+	#define FILTER_CONTEXT 0
+#endif
+
 typedef struct {
     char W;
     short Wm, color;
@@ -332,12 +336,24 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     // Print BOSS construction info
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char info[FILE_PATH];
-    
+
+    sprintf(info, "results/%s-%s_k_%d", file1, file2, k);
+
     #if COVERAGE
-        sprintf(info, "results/%s-%s_k_%d_coverage_1_%c.info", file1, file2, k, coverage_type);
+        char coverage_arg[FILE_PATH];
+        sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+        strcat(info, coverage_arg);
     #else
-        sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
+        strcat(info, "_coverage_0");
     #endif
+
+    #if FILTER_CONTEXT
+        strcat(info, "_filtered");
+    #endif
+
+    strcat(info, ".txt");
+
+    // add _filtered.info
     
     FILE *info_file = fopen(info, "w");
                 

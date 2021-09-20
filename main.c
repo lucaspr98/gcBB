@@ -139,7 +139,7 @@ int main(int argc, char *argv[]){
     
     // Computes merge of files
     for(i = 0; i < files_n; i++){
-        for(j = i; j < files_n; j++){
+        for(j = 0; j < files_n; j++){
             compute_merge_files(path, files[i], files[j]);
         }
     }
@@ -157,53 +157,51 @@ int main(int argc, char *argv[]){
     // Initialize matrixes
     for(i = 0; i < files_n; i++){
         for(j = 0; j < files_n; j++){
-            Dm[i][j] = 0;
-            De[i][j] = 0;
+            Dm[i][j] = 0.0;
+            De[i][j] = 0.0;
         }
     }
 
     for(i = 0; i < files_n; i++){
         for(j = 0; j < files_n; j++){
-            if(j >= i){
-                char mergeBWTFile[FILE_PATH];
-                char mergeLCPFile[FILE_PATH];
-                char mergeDAFile[FILE_PATH];
-                char mergeSLFile[FILE_PATH];
+            char mergeBWTFile[FILE_PATH];
+            char mergeLCPFile[FILE_PATH];
+            char mergeDAFile[FILE_PATH];
+            char mergeSLFile[FILE_PATH];
 
-                sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
-                sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
-                sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
+            sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
+            sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
+            sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
+            sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
 
-                FILE *mergeBWT = fopen(mergeBWTFile, "r");
-                FILE *mergeLCP = fopen(mergeLCPFile, "rb");
-                FILE *mergeDA = fopen(mergeDAFile, "rb");
-                FILE *mergeSL = fopen(mergeSLFile, "rb");
+            FILE *mergeBWT = fopen(mergeBWTFile, "r");
+            FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+            FILE *mergeDA = fopen(mergeDAFile, "rb");
+            FILE *mergeSL = fopen(mergeSLFile, "rb");
 
-                fseek(mergeBWT, 0, SEEK_END);
-                size_t n = ftell(mergeBWT);
-                rewind(mergeBWT);
+            fseek(mergeBWT, 0, SEEK_END);
+            size_t n = ftell(mergeBWT);
+            rewind(mergeBWT);
 
-                /******** Construct BOSS representation ********/
-                int samples = 2;
+            /******** Construct BOSS representation ********/
+            int samples = 2;
 
-                size_t total_coverage = 0;
+            size_t total_coverage = 0;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
+            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
 
-                fclose(mergeBWT);
-                fclose(mergeLCP);
-                fclose(mergeDA);
+            fclose(mergeBWT);
+            fclose(mergeLCP);
+            fclose(mergeDA);
 
-                /******** Compute BWSD ********/
-                double expectation, entropy;
-                expectation = entropy = 0;
+            /******** Compute BWSD ********/
+            double expectation, entropy;
+            expectation = entropy = 0.0;
 
-                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
+            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
 
-                Dm[i][j] = expectation;
-                De[i][j] = entropy;
-            }
+            Dm[i][j] = expectation;
+            De[i][j] = entropy;
         }
     }    
 

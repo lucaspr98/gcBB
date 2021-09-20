@@ -43,6 +43,8 @@ double bwsd_shannon_entropy(int *t, int s, int n){
         if(t[i] != 0){
             double frac = (double)t[i]/(double)s;
             value += frac*log2(frac);
+            // test log2(t[i])-log2(s)
+            // i = n+1 -> 1
         }
     }
 
@@ -211,12 +213,23 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(coverage_file);
 
     char info[FILE_PATH];
-    
+
+
+    sprintf(info, "results/%s-%s_k_%d", file1, file2, k);
+
     #if COVERAGE
-        sprintf(info, "results/%s-%s_k_%d_coverage_1_%c.info", file1, file2, k, coverage_type);
+        char coverage_arg[FILE_PATH];
+        sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+        strcat(info, coverage_arg);
     #else
-        sprintf(info, "results/%s-%s_k_%d_coverage_0.info", file1, file2, k);
+        strcat(info, "_coverage_0");
     #endif
+
+    #if FILTER_CONTEXT
+        strcat(info, "_filtered");
+    #endif
+
+    strcat(info, ".txt");
 
     FILE *info_file = fopen(info, "a+");
 
@@ -287,9 +300,8 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
 
         sprintf(outputFile, "results/%s_distance_matrixes_k_%d", folder, k);
 
-
-        char coverage_arg[FILE_PATH];
         #if COVERAGE
+            char coverage_arg[FILE_PATH];
             sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
             strcat(outputFile, coverage_arg);
         #else
