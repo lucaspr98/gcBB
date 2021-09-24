@@ -17,17 +17,21 @@ applications*](https://doi.org/10.1186/s13015-019-0140-0).
 The eGap repository comes within clone with flag `--recursive`
 
 ## Compile
-If you do not want the BWSD to use coverage to weight the comparison, use the command:
+Use the command:
 ```sh
 make
 ```
-or 
+Flags:
+
+*COVERAGE*    
+    specify 1 to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
+
+*FILTER_CONTEXT*    
+    specify 1 to apply only BOSS edges from contexts smaller than k on BWSD. The default FILTER_CONTEXT=0.
+
+For example:
 ```sh
-make COVERAGE=0
-```
-else, use the command:
-```sh
-make COVERAGE=1
+make COVERAGE=1 FILTER_CONTEXT=1
 ```
 
 ## Run
@@ -81,4 +85,10 @@ In directory results, there will be _8*((N-1)*N/2)*_ files containing all possib
     specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
 
 *-p*    
-    used to print BOSS files (last, w, wm, colors, coverage, reduced_LCP) in results directory.
+    used to print BOSS files (last, w, wm, colors, coverage, summarized\_LCP, summarized\_SL) in results directory.
+    
+*-c*    
+    specify wich coverage strategy to use:
+* a: apply coverage to all edges;
+* e: merge values from same k-mers from distinct genomes using coverege, for example: 0^3 1^2 -> 0^1 1^0 0^1 1^0 0^1;
+* d: apply coverage if the next edge k-mers is distinct from the current one;

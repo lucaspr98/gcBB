@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <math.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <libgen.h>
@@ -188,7 +187,7 @@ int main(int argc, char *argv[]){
 
             size_t total_coverage = 0;
 
-            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
+            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage, j<i);
 
             fclose(mergeBWT);
             fclose(mergeLCP);
@@ -198,7 +197,7 @@ int main(int argc, char *argv[]){
             double expectation, entropy;
             expectation = entropy = 0.0;
 
-            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
+            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage, j<i);
 
             Dm[i][j] = expectation;
             De[i][j] = entropy;
@@ -235,7 +234,7 @@ void compute_file(char *path, char *file){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGap[FILE_PATH];
-        sprintf(eGap, "egap/eGap %s%s -m 52000 --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, file);
+        sprintf(eGap, "egap/eGap %s%s -m 12000 --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, file);
         system(eGap);    
     } else
         fclose(tmp);
@@ -251,7 +250,7 @@ void compute_merge_files(char *path, char *file1, char *file2){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
-        sprintf(eGapMerge, "egap/eGap -m 52000 --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m 12000 --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
         system(eGapMerge);    
     } else 
         fclose(tmp);

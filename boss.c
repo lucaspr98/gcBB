@@ -48,61 +48,6 @@ void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int e
     }
     
     free(values);
-
-    // int range = end-start;
-    // char Wi_tmp[range];
-    // short Wm_tmp[range];
-    // short colors_tmp[range];
-    // int coverage_tmp[range];
-    // int Wi_aux[255];
-    // int Wm_aux[255];
-    // int repetitive[255];
-
-    // memset(Wi_tmp, 0, sizeof(char)*(range));    
-    // memset(Wm_tmp, 0, sizeof(int)*(range)); 
-    // memset(colors_tmp, 0, sizeof(int)*(range)); 
-    // memset(coverage_tmp, 0, sizeof(int)*(range)); 
-    // memset(Wi_aux, 0, sizeof(int)*255);
-    // memset(repetitive, 0, sizeof(int)*255);
-    // memset(Wm_aux, 0, sizeof(int)*255);
-
-    // for(i = start; i < end; i++){
-    //     Wi_aux[Wi[i]]++;
-    //     Wm_aux[Wi[i]] += Wm[i];
-    // }
-
-    // for(i = start; i < end; i++){
-    //     if(Wi_aux[Wi[i]] > 1)
-    //         repetitive[Wi[i]] = 1;
-    // }
-
-    // for(i = 1; i < 255; i++){
-    //     Wi_aux[i] += Wi_aux[i-1];
-    // }
-
-    // for(i = start; i < end; i++){
-    //     Wi_tmp[Wi_aux[Wi[i]]-1] = Wi[i];
-        
-    //     if(repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] == 0){
-    //         Wm_tmp[Wi_aux[Wi[i]]-1] = 1;
-    //     } else if (repetitive[Wi[i]] == 1 && Wm_aux[Wi[i]] > 0){
-    //         Wm_tmp[Wi_aux[Wi[i]]-1] = 0;
-    //         Wm_aux[Wi[i]]--;
-    //     } else {
-    //         Wm_tmp[Wi_aux[Wi[i]]-1] = Wm[i];
-    //     }
-    //     colors_tmp[Wi_aux[Wi[i]]-1] = colors[i];
-    //     coverage_tmp[Wi_aux[Wi[i]]-1] = coverage[i];
-    //     Wi_aux[Wi[i]]--;
-    // }
-
-    // for(i = start; i < end; i++){
-    //     Wi[i] = Wi_tmp[i-start];
-    //     Wm[i] = Wm_tmp[i-start];
-    //     colors[i] = colors_tmp[i-start];
-    //     coverage[i] = coverage_tmp[i-start];
-    // }
-
 }
 
 void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short *summarized_SL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int Wi_size, int edge_status){
@@ -129,7 +74,7 @@ void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type, size_t *total_coverage){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type, size_t *total_coverage, short complement){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
@@ -145,6 +90,8 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     fread(LCP, sizeof(short), mem+1, mergeLCP);
     fread(SL, sizeof(short), mem, mergeSL);
     fread(DA, sizeof(char), mem, mergeDA);
+    if(complement) 
+        for(j = 0; j < mem; j++) DA[j] = DA[j] == 1 ? 0 : 1;
     fread(BWT, sizeof(char), mem, mergeBWT);
     for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
 
@@ -207,14 +154,15 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             fread(LCP, sizeof(short), mem+1, mergeLCP);
             fread(SL, sizeof(short), mem, mergeSL);
             fread(DA, sizeof(char), mem, mergeDA);
+            if(complement) 
+                for(j = 0; j < mem; j++) DA[j] = DA[j] == 1 ? 0 : 1;
             fread(BWT, sizeof(char), mem, mergeBWT);
             for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
-            
             block_pos = 0;
         }
 
         // more than one outgoing edge of vertex i
-        if(LCP[block_pos+1] >= k && bi != n-1){
+        if(LCP[block_pos+1] >= k && bi != n-1 ){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
             // if(BWT[block_pos] != '$'){ //change BWT[block_pos] with a new last_BWT variable (?) removed for now
                 if(Wi_freq[BWT[block_pos]] == 0){

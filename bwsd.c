@@ -15,15 +15,18 @@
 	#define FILTER_CONTEXT 0
 #endif
 
+double log2(double i){
 
-//max length para o tamanho do arquivo
+	return log(i)/log(2);
 
-double bwsd_expectation(int *t, int s, int n){
-    int i;
+}
+
+double bwsd_expectation(size_t *t, size_t s, size_t n){
+    size_t i;
 	double value = 0.0;
     double frac;
     
-    //go to max_t
+    //n = max_t
 	for(i = 1; i < n+1; i++){
         if(t[i] != 0){
             frac = (double)t[i]/s;
@@ -34,25 +37,24 @@ double bwsd_expectation(int *t, int s, int n){
     return value-1.0;
 }
 
-double bwsd_shannon_entropy(int *t, int s, int n){
-    int i;
+double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
+    size_t i;
 	double value = 0.0;
 	
-    //go to max_t
-    for(i = 1; i < n+1; i++){
+    //n = max_t
+    for(i = 0; i < n+1; i++){
         if(t[i] != 0){
             double frac = (double)t[i]/(double)s;
-            value += frac*log2(frac);
-            // test log2(t[i])-log2(s)
-            // i = n+1 -> 1
+            value += frac*(log2(frac));
         }
     }
 
-    return value*(-1.0);
-
+    if(value)
+        return value*(-1.0);
+    return value;
 }
 
-size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, int *rl_freq, size_t pos){
+size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, size_t *rl_freq, size_t pos){
     int repetitions = 0;
     while(repetitions <= secondaryCoverage){
         pos++;
@@ -66,17 +68,14 @@ size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, int *rl_
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage){
-    size_t i;
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage, short complement){
+    size_t i, j;
 
     #if COVERAGE
         size_t size = total_coverage+1;
     #else
        size_t size = n+1;
     #endif
-
-
-    // printf("size: %ld\n\n", size);
 
     short *colors = (short*)calloc((mem+2), sizeof(short));
     short *summarized_LCP = (short*)calloc((mem+2), sizeof(short));
@@ -99,14 +98,14 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     FILE *coverage_file = fopen(coverage_file_name, "rb");
 
     fread(colors, sizeof(short), mem+1, colors_file);
+    if(complement) 
+        for(j = 0; j < mem; j++) colors[j] = colors[j] == 1 ? 0 : 1;
     fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
     fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
     fread(coverage, sizeof(int), mem+1, coverage_file);
 
-
-
-    int *rl_freq = (int*)calloc(size, sizeof(int));
-    int max_freq = 0;
+    size_t *rl_freq = (size_t*)calloc(size, sizeof(size_t));
+    size_t max_freq = 0;
 
     int current = 0;
     rl_freq[0] = 0;
@@ -119,6 +118,8 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             // todo: try to copy last value to position 0 and read mem elements from position 1 
             fseek(colors_file, -sizeof(short), SEEK_CUR);
             fread(colors, sizeof(short), mem+1, colors_file);
+            if(complement) 
+                for(j = 0; j < mem; j++) colors[j] = colors[j] == 1 ? 0 : 1;
 
             fseek(summarized_LCP_file, -sizeof(short), SEEK_CUR);
             fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
@@ -200,9 +201,17 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
 
     // computes every t_(k_j), where 1 <= j <= max_freq
-    int *t = (int*) calloc((max_freq+4), sizeof(int));
+    size_t *t = (size_t*) calloc((max_freq+4), sizeof(size_t));
+    short *genome0 = (short*) calloc((max_freq+4), sizeof(short));
+    short *genome1 = (short*) calloc((max_freq+4), sizeof(short));
     for(i = 0; i < pos; i++){
-        if(rl_freq[i] > 0) t[rl_freq[i]]++;
+        if(rl_freq[i] > 0){
+            t[rl_freq[i]]++;
+            if(i%2)
+                genome0[rl_freq[i]] = 1;
+            else 
+                genome1[rl_freq[i]] = 1;
+        } 
     }
 
     //sum termos
@@ -213,7 +222,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(coverage_file);
 
     char info[FILE_PATH];
-
 
     sprintf(info, "results/%s-%s_k_%d", file1, file2, k);
 
@@ -253,7 +261,14 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     for(i = 0; i < max_freq+1; i++){
         if(t[i] != 0){
-            fprintf(info_file, "t_%ld = %d\n", i, t[i]);
+            fprintf(info_file, "t_%ld = %ld (", i, t[i]);
+            if(genome0[i])
+                fprintf(info_file, "0");
+            if(genome0[i] && genome1[i])
+                fprintf(info_file, ",");
+            if(genome1[i])
+                fprintf(info_file, "1");    
+            fprintf(info_file, ")\n");
         }
     }
 
@@ -341,10 +356,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%d\t", i+1);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "%10.5lf\t", Dm[i][j]);
-            else
-                fprintf(bwsd_matrixes, "%10.5lf\t", Dm[j][i]);
+            fprintf(bwsd_matrixes, "%10.5lf\t", Dm[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
@@ -360,10 +372,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%d\t", i+1);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "%10.5lf\t", De[i][j]);
-            else
-                fprintf(bwsd_matrixes, "%10.5lf\t", De[j][i]);
+            fprintf(bwsd_matrixes, "%10.5lf\t", De[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
@@ -382,10 +391,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%s,", files[i]);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "%lf,", Dm[i][j]);
-            else
-                fprintf(bwsd_matrixes, "%lf,", Dm[j][i]);
+            fprintf(bwsd_matrixes, "%lf,", Dm[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
@@ -399,10 +405,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%s,", files[i]);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "%lf,", De[i][j]);
-            else
-                fprintf(bwsd_matrixes, "%lf,", De[j][i]);
+            fprintf(bwsd_matrixes, "%lf,", De[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
@@ -414,10 +417,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%s", files[i]);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "\t%lf", Dm[i][j]);
-            else
-                fprintf(bwsd_matrixes, "\t%lf", Dm[j][i]);
+            fprintf(bwsd_matrixes, "\t%lf", Dm[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
@@ -429,10 +429,7 @@ void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, ch
     for(i = 0; i < files_n; i++){
         fprintf(bwsd_matrixes, "%s", files[i]);
         for(j = 0; j < files_n; j++){
-            if(j >= i)
-                fprintf(bwsd_matrixes, "\t%lf", De[i][j]);
-            else
-                fprintf(bwsd_matrixes, "\t%lf", De[j][i]);
+            fprintf(bwsd_matrixes, "\t%lf", De[i][j]);
         }
         fprintf(bwsd_matrixes, "\n");
     }
