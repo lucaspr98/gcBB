@@ -163,7 +163,7 @@ int main(int argc, char *argv[]){
 
     for(i = 0; i < files_n; i++){
         for(j = 0; j < files_n; j++){
-            if(j < i){       
+            if(j > i){       
                 char mergeBWTFile[FILE_PATH];
                 char mergeLCPFile[FILE_PATH];
                 char mergeDAFile[FILE_PATH];

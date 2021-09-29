@@ -272,6 +272,8 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         }
     }
 
+    free(genome0); free(genome1);
+
     fprintf(info_file, "\n");
 
     if(!printBoss){

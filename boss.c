@@ -194,6 +194,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
         } else {
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
+                //fix SL[block_pos-1] memory leak
                 if(SL[block_pos] > 1 && !(LCP[block_pos] == SL[block_pos-1]-1 && BWT[block_pos] == BWT[block_pos-1] && DA[block_pos] == DA[block_pos-1])){
                     add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
                     C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
