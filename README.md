@@ -19,20 +19,12 @@ The eGap repository comes within clone with flag `--recursive`
 ## Compile
 Use the command:
 ```sh
-make
+make all
 ```
 Flags:
 
 *COVERAGE*    
     specify 1 to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
-
-*FILTER_CONTEXT*    
-    specify 1 to apply only BOSS edges from contexts smaller than k on BWSD. The default FILTER_CONTEXT=0.
-
-For example:
-```sh
-make COVERAGE=1 FILTER_CONTEXT=1
-```
 
 ## Run
 The code of gcBB provides the possibility of comparing a pair of genomes or all pairs of genomes in a collection. After running the algorithm a directory named `results/` will be created containing:
@@ -46,25 +38,17 @@ To compute the BOSS representation and the BWSD between a pair of genomes run gc
 ```
 **Example:**
 ```sh
-./gcBB dataset/ reads1.fastq reads2.fastq -p
+./gcBB dataset/ -k 16 reads1.fastq reads2.fastq
 ```
-In directory results, there will be eight files: 
+In directory results, there will be following files: 
 
--`reads1-reads2.boss-info`
+-`reads1-reads2_k_16.info`;
 
--`reads1-reads2.2.last`
+-`reads1-reads2_expectation_k_16.dmat` and  `reads1-reads2_entropy_k_16.dmat`.
 
--`reads1-reads2.2.W`
+If the coverage flag was used in make, then we will have the following files:
 
--`reads1-reads2.2.Wm`
-
--`reads1-reads2.2.colors`
-
--`reads1-reads2.4.coverage`
-
--`reads1-reads2.2.reduced_lcp`
-
--`reads1-reads2_distance_matrixes_coverage_0.txt` or `reads1-reads2_distance_matrixes_coverage_1.txt`(depending on the compilation flag). 
+-`reads1-reads2_expectation_k_16_coverage_x.dmat` and `reads1-reads2_entropy_k_16_coverage_x.dmat`. (where x represents the coverage strategy). 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
@@ -73,9 +57,9 @@ To compute the BOSS representation and the BWSD between all pair of genomes from
 ```
 **Example:**
 ```sh
-./gcBB influenza_dataset/ -p
+./gcBB influenza_dataset/ -k 16 -p
 ```
-In directory results, there will be _8*((N-1)*N/2)*_ files containing all possible pair of genomes in the directory BOSS representations, where **N** is the number of genomes in the directory, and `influenza_dataset_distance_matrixes_coverage_0.txt` or `influenza_dataset_distance_matrixes_coverage_1.txt`(depending on the compilation flag).
+In directory results, there will be _8*((N-1)*N/2)*_ files containing all possible pair of genomes in the directory BOSS representations, where **N** is the number of genomes in the directory, and `influenza_dataset_expectation_k_16.dmat` and  `influenza_dataset_entropy_k_16.dmat`.
 
 ### Command line options
 *-k*    

@@ -11,7 +11,8 @@
         "bwsd.h": "c",
         "random": "c",
         "iosfwd": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "libgen.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

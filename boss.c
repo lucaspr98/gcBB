@@ -9,10 +9,6 @@
 	#define COVERAGE 0
 #endif
 
-#ifndef FILTER_CONTEXT
-	#define FILTER_CONTEXT 0
-#endif
-
 typedef struct {
     char W;
     short Wm, color;
@@ -74,7 +70,7 @@ void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type, size_t *total_coverage, short complement){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, char coverage_type, size_t *total_coverage){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
@@ -90,8 +86,6 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     fread(LCP, sizeof(short), mem+1, mergeLCP);
     fread(SL, sizeof(short), mem, mergeSL);
     fread(DA, sizeof(char), mem, mergeDA);
-    if(complement) 
-        for(j = 0; j < mem; j++) DA[j] = DA[j] == 1 ? 0 : 1;
     fread(BWT, sizeof(char), mem, mergeBWT);
     for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
 
@@ -104,13 +98,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char boss_summarized_LCP[FILE_PATH];
     char boss_summarized_SL[FILE_PATH];
 
-    sprintf(boss_last, "results/%s-%s.2.last", file1, file2);
-    sprintf(boss_w, "results/%s-%s.1.W", file1, file2);
-    sprintf(boss_wm, "results/%s-%s.2.Wm", file1, file2);
-    sprintf(boss_colors, "results/%s-%s.2.colors", file1, file2);
-    sprintf(boss_coverage, "results/%s-%s.4.coverage", file1, file2);
-    sprintf(boss_summarized_LCP, "results/%s-%s.2.summarized_LCP", file1, file2);
-    sprintf(boss_summarized_SL, "results/%s-%s.2.summarized_SL", file1, file2);
+    sprintf(boss_last, "results/%s-%s_k_%d.2.last", file1, file2, k);
+    sprintf(boss_w, "results/%s-%s_k_%d.1.W", file1, file2, k);
+    sprintf(boss_wm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
+    sprintf(boss_colors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+    sprintf(boss_coverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+    sprintf(boss_summarized_LCP, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+    sprintf(boss_summarized_SL, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
 
     FILE *boss_last_file = fopen(boss_last, "wb");
     FILE *boss_w_file = fopen(boss_w, "wb");
@@ -154,8 +148,6 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             fread(LCP, sizeof(short), mem+1, mergeLCP);
             fread(SL, sizeof(short), mem, mergeSL);
             fread(DA, sizeof(char), mem, mergeDA);
-            if(complement) 
-                for(j = 0; j < mem; j++) DA[j] = DA[j] == 1 ? 0 : 1;
             fread(BWT, sizeof(char), mem, mergeBWT);
             for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
             block_pos = 0;
@@ -195,16 +187,16 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
                 //fix SL[block_pos-1] memory leak
-                if(SL[block_pos] > 1 && !(LCP[block_pos] == SL[block_pos-1]-1 && BWT[block_pos] == BWT[block_pos-1] && DA[block_pos] == DA[block_pos-1])){
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
-                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
-                } else if (SL[block_pos] == 1 && dummies_freq[DA[block_pos]][BWT[block_pos]] == 0) {
+                if (SL[block_pos] == 1 && dummies_freq[DA[block_pos]][BWT[block_pos]] == 0) {
                     add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
 
                     dummies_freq[DA[block_pos]][BWT[block_pos]]++;
 
                     C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
-                }
+                } else if(SL[block_pos] > 1 && !(LCP[block_pos] == SL[block_pos-1]-1 && BWT[block_pos] == BWT[block_pos-1] && DA[block_pos] == DA[block_pos-1])){
+                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
+                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
+                } 
             } 
             // last outgoing edge of vertex i
             else {
@@ -286,23 +278,17 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s-%s_k_%d", file1, file2, k);
+    sprintf(info, "results/%s-%s", file1, file2);
 
     #if COVERAGE
         char coverage_arg[FILE_PATH];
-        sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+        sprintf(coverage_arg, "_coverage_%c", coverage_type);
         strcat(info, coverage_arg);
-    #else
-        strcat(info, "_coverage_0");
     #endif
 
-    #if FILTER_CONTEXT
-        strcat(info, "_filtered");
-    #endif
-
-    strcat(info, ".txt");
-
-    // add _filtered.info
+    char extension[FILE_PATH];
+    sprintf(extension, "_k_%d.info", k);
+    strcat(info, extension);
     
     FILE *info_file = fopen(info, "w");
                 

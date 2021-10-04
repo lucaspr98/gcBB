@@ -1,16 +1,14 @@
 CC = gcc
-CFLAGS = -g -O0 -c -std=gnu99 
+CFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -c -std=gnu99 
 OBJFILES = main.o boss.o bwsd.o
 TARGET = gcBB
 
-# coverage information
 COVERAGE = 0
-FILTER_CONTEXT = 0
 
-DEFINES = -DCOVERAGE=$(COVERAGE) -DFILTER_CONTEXT=$(FILTER_CONTEXT)
+DEFINES = -DCOVERAGE=$(COVERAGE)
 
 all: $(TARGET)
-	make -C egap/
+	make -C egap/ && make -C utils/
 
 $(TARGET): $(OBJFILES)
 	$(CC) -o $(TARGET) $(OBJFILES) -lm 
@@ -25,4 +23,4 @@ main.o: main.c
 	$(CC) $(CFLAGS) main.c -o main.o
 
 clean:
-	rm -f $(TARGET) $(OBJFILES) *~
+	rm -f $(TARGET) $(OBJFILES) *~ && cd utils && rm *.o 

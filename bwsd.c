@@ -11,10 +11,6 @@
 	#define COVERAGE 0
 #endif
 
-#ifndef FILTER_CONTEXT
-	#define FILTER_CONTEXT 0
-#endif
-
 double log2(double i){
 
 	return log(i)/log(2);
@@ -68,8 +64,8 @@ size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, size_t *
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage, short complement){
-    size_t i, j;
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage){
+    size_t i;
 
     #if COVERAGE
         size_t size = total_coverage+1;
@@ -87,10 +83,10 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     char summarized_SL_file_name[FILE_PATH];
     char coverage_file_name[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s-%s.2.colors", file1, file2);
-    sprintf(summarized_LCP_file_name, "results/%s-%s.2.summarized_LCP", file1, file2);
-    sprintf(summarized_SL_file_name, "results/%s-%s.2.summarized_SL", file1, file2);
-    sprintf(coverage_file_name, "results/%s-%s.4.coverage", file1, file2);
+    sprintf(color_file_name, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+    sprintf(summarized_LCP_file_name, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+    sprintf(summarized_SL_file_name, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+    sprintf(coverage_file_name, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
     
     FILE *colors_file = fopen(color_file_name, "rb");
     FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
@@ -98,8 +94,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     FILE *coverage_file = fopen(coverage_file_name, "rb");
 
     fread(colors, sizeof(short), mem+1, colors_file);
-    if(complement) 
-        for(j = 0; j < mem; j++) colors[j] = colors[j] == 1 ? 0 : 1;
     fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
     fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
     fread(coverage, sizeof(int), mem+1, coverage_file);
@@ -118,8 +112,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             // todo: try to copy last value to position 0 and read mem elements from position 1 
             fseek(colors_file, -sizeof(short), SEEK_CUR);
             fread(colors, sizeof(short), mem+1, colors_file);
-            if(complement) 
-                for(j = 0; j < mem; j++) colors[j] = colors[j] == 1 ? 0 : 1;
 
             fseek(summarized_LCP_file, -sizeof(short), SEEK_CUR);
             fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
@@ -159,9 +151,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             }
         } else { 
         #endif
-            #if FILTER_CONTEXT
             if(summarized_SL[block_pos] > k){
-            #endif
                 if(colors[block_pos] == current){
                     rl_freq[pos]++;
                     #if COVERAGE
@@ -176,9 +166,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
                     pos++;
                     rl_freq[pos]=1;
                 }
-            #if FILTER_CONTEXT
             }
-            #endif
         #if COVERAGE
         }
         #endif
@@ -223,21 +211,17 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s-%s_k_%d", file1, file2, k);
+    sprintf(info, "results/%s-%s", file1, file2);
 
     #if COVERAGE
         char coverage_arg[FILE_PATH];
-        sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
+        sprintf(coverage_arg, "_coverage_%c", coverage_type);
         strcat(info, coverage_arg);
-    #else
-        strcat(info, "_coverage_0");
     #endif
 
-    #if FILTER_CONTEXT
-        strcat(info, "_filtered");
-    #endif
-
-    strcat(info, ".txt");
+    char extension[FILE_PATH];
+    sprintf(extension, "_k_%d.info", k);
+    strcat(info, extension);
 
     FILE *info_file = fopen(info, "a+");
 
@@ -249,13 +233,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         fprintf(info_file, "n = %ld\n", n);
     #endif
     fprintf(info_file, "sum frequencies = %ld\n", sum_freq);
-    #if COVERAGE
-        fprintf(info_file, "total_coverage-sum_frequencies = %ld\n\n", total_coverage-sum_freq);
-    #else   
-        fprintf(info_file, "n-sum_frequencies = %ld\n\n", n-sum_freq);
-    #endif
-
-    fprintf(info_file, "s = %ld\n", pos);
+    fprintf(info_file, "s = %ld\n\n", pos);
 
     fprintf(info_file, "terms: \n");
 
@@ -299,142 +277,4 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(info_file);
 
     free(t);
-}
-
-void print_bwsd_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type){
-    int i,j;
-    char *ptr;
-    char outputFile[FILE_PATH];
-
-    int len = strlen(path);
-    char folder[len];
-    strcpy(folder, basename(path));
-
-    if(files_n > 2){
-        ptr = strchr(path, '/');
-        if (ptr != NULL)
-            *ptr = '\0';
-
-        sprintf(outputFile, "results/%s_distance_matrixes_k_%d", folder, k);
-
-        #if COVERAGE
-            char coverage_arg[FILE_PATH];
-            sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
-            strcat(outputFile, coverage_arg);
-        #else
-            strcat(outputFile, "_coverage_0");
-        #endif
-
-        #if FILTER_CONTEXT
-            strcat(outputFile, "_filtered");
-        #endif
-
-        strcat(outputFile, ".txt");
-
-    } else {
-        sprintf(outputFile, "results/%s-%s_distance_matrixes_k_%d", files[0], files[1], k);            
-
-        char coverage_arg[FILE_PATH];
-        #if COVERAGE
-            sprintf(coverage_arg, "_coverage_1_%c", coverage_type);
-            strcat(outputFile, coverage_arg);
-        #else
-            strcat(outputFile, "_coverage_0");
-        #endif
-
-        strcat(outputFile, ".txt");
-    }
-    
-
-    FILE *bwsd_matrixes = fopen(outputFile, "w");
-    
-    fprintf(bwsd_matrixes, "Expectation matrix (D_m):\n");
-
-    fprintf(bwsd_matrixes, "\t");
-    for(i = 0; i < files_n; i++)
-        fprintf(bwsd_matrixes, "%10d\t", i+1);
-    fprintf(bwsd_matrixes, "\n");
-
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%d\t", i+1);
-        for(j = 0; j < files_n; j++){
-            fprintf(bwsd_matrixes, "%10.5lf\t", Dm[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-    fprintf(bwsd_matrixes, "\n\n");
-
-    fprintf(bwsd_matrixes, "Shannon's entropy matrix (D_e):\n");
-
-    fprintf(bwsd_matrixes, "\t");
-    for(i = 0; i < files_n; i++)
-        fprintf(bwsd_matrixes, "%10d\t", i+1);
-    fprintf(bwsd_matrixes, "\n");
-
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%d\t", i+1);
-        for(j = 0; j < files_n; j++){
-            fprintf(bwsd_matrixes, "%10.5lf\t", De[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-    
-    fprintf(bwsd_matrixes, "\n\n");
-    fprintf(bwsd_matrixes, "Matrix info:\n");
-    for(i = 0; i < files_n; i++)
-        fprintf(bwsd_matrixes, "%d: %s\n", i+1, files[i]);
-
-    fprintf(bwsd_matrixes, "\n\n");
-    fprintf(bwsd_matrixes, "CSV expectation distance matrix:\n");
-
-    for(i = 0; i < files_n; i++)
-        fprintf(bwsd_matrixes, ",%s",files[i]);
-    fprintf(bwsd_matrixes, "\n");
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s,", files[i]);
-        for(j = 0; j < files_n; j++){
-            fprintf(bwsd_matrixes, "%lf,", Dm[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-    
-    fprintf(bwsd_matrixes, "\n\n");
-    fprintf(bwsd_matrixes, "CSV entropy distance matrix:\n");
-
-    for(i = 0; i < files_n; i++)
-        fprintf(bwsd_matrixes, ",%s",files[i]);
-    fprintf(bwsd_matrixes, "\n");
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s,", files[i]);
-        for(j = 0; j < files_n; j++){
-            fprintf(bwsd_matrixes, "%lf,", De[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-
-    fprintf(bwsd_matrixes, "\n\n");
-    fprintf(bwsd_matrixes, "Phylip expectation distance matrix:\n");
-
-    fprintf(bwsd_matrixes, "%d\n", files_n);
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s", files[i]);
-        for(j = 0; j < i+1; j++){
-            fprintf(bwsd_matrixes, "\t%lf", Dm[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-
-    fprintf(bwsd_matrixes, "\n\n");
-    fprintf(bwsd_matrixes, "Phylip entropy distance matrix:\n");
-
-    fprintf(bwsd_matrixes, "%d\n", files_n);
-    for(i = 0; i < files_n; i++){
-        fprintf(bwsd_matrixes, "%s", files[i]);
-        for(j = 0; j < i+1; j++){
-            fprintf(bwsd_matrixes, "\t%lf", De[i][j]);
-        }
-        fprintf(bwsd_matrixes, "\n");
-    }
-
-    fclose(bwsd_matrixes);
 }

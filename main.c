@@ -15,9 +15,19 @@ void compute_file(char *path, char *file);
 
 void compute_merge_files(char *path, char *file1, char *file2);
 
+void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type);
+
+void compute_newick_files(char* dmat);
+
+int compare_files(const void *element1, const void *element2) {
+    const char **file_1 = (const char **)element1;
+    const char **file_2 = (const char **)element2;
+    return strcmp(*file_1, *file_2);
+}
+
 int main(int argc, char *argv[]){
-    int i, j, m;
-    char **files = (char**)calloc(10, 32*sizeof(char*));
+    int i, j;
+    char **files = (char**)calloc(16, 64*sizeof(char*));
     int k = 30;
     int files_n = 0;
     char *path;
@@ -83,7 +93,6 @@ int main(int argc, char *argv[]){
             char *isFasta = strstr(entry->d_name, ".fasta");
 
             if((isFastq && strlen(isFastq) == 6) || (isFasta && strlen(isFasta) == 6)){
-                printf("%s\n", entry->d_name);
                 len = strlen(entry->d_name)+1;
                 files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
 
@@ -120,6 +129,8 @@ int main(int argc, char *argv[]){
     system("mkdir tmp");
     system("mkdir results");
 
+    qsort(files, files_n, sizeof(char*), compare_files);
+
     /******** Compute external needed files ********/
 
     // Computes SA, BWT, LCP and DA from both files
@@ -129,13 +140,12 @@ int main(int argc, char *argv[]){
 
     // Remove file format from the string
     for(i = 0; i < files_n; i++){
-        int len = strlen(files[i]);
         char *ptr;
         ptr = strchr(files[i], '.');
         if (ptr != NULL)
             *ptr = '\0';
     }
-    
+
     // Computes merge of files
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
@@ -162,52 +172,50 @@ int main(int argc, char *argv[]){
     }
 
     for(i = 0; i < files_n; i++){
-        for(j = 0; j < files_n; j++){
-            if(j > i){       
-                char mergeBWTFile[FILE_PATH];
-                char mergeLCPFile[FILE_PATH];
-                char mergeDAFile[FILE_PATH];
-                char mergeSLFile[FILE_PATH];
+        for(j = i+1; j < files_n; j++){
+            char mergeBWTFile[FILE_PATH];
+            char mergeLCPFile[FILE_PATH];
+            char mergeDAFile[FILE_PATH];
+            char mergeSLFile[FILE_PATH];
 
-                sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
-                sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-                sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
-                sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
+            sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
+            sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
+            sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
+            sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
 
-                FILE *mergeBWT = fopen(mergeBWTFile, "r");
-                FILE *mergeLCP = fopen(mergeLCPFile, "rb");
-                FILE *mergeDA = fopen(mergeDAFile, "rb");
-                FILE *mergeSL = fopen(mergeSLFile, "rb");
+            FILE *mergeBWT = fopen(mergeBWTFile, "r");
+            FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+            FILE *mergeDA = fopen(mergeDAFile, "rb");
+            FILE *mergeSL = fopen(mergeSLFile, "rb");
 
-                fseek(mergeBWT, 0, SEEK_END);
-                size_t n = ftell(mergeBWT);
-                rewind(mergeBWT);
+            fseek(mergeBWT, 0, SEEK_END);
+            size_t n = ftell(mergeBWT);
+            rewind(mergeBWT);
 
-                /******** Construct BOSS representation ********/
-                int samples = 2;
+            /******** Construct BOSS representation ********/
+            int samples = 2;
 
-                size_t total_coverage = 0;
+            size_t total_coverage = 0;
 
-                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage, j<i);
+            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
 
-                fclose(mergeBWT);
-                fclose(mergeLCP);
-                fclose(mergeDA);
+            fclose(mergeBWT);
+            fclose(mergeLCP);
+            fclose(mergeDA);
 
-                /******** Compute BWSD ********/
-                double expectation, entropy;
-                expectation = entropy = 0.0;
+            /******** Compute BWSD ********/
+            double expectation, entropy;
+            expectation = entropy = 0.0;
 
-                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage, j<i);
+            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
 
-                Dm[i][j] = expectation;
-                De[i][j] = entropy;
-            }
+            Dm[j][i] = expectation;
+            De[j][i] = entropy;
         }
     }    
 
-    // Print BWSD results
-    print_bwsd_matrixes(Dm, De, files, files_n, path, k, coverage_type);
+    // Print BWSD results in files .dmat and .nhx
+    print_distance_matrixes(Dm, De, files, files_n, path, k, coverage_type);
 
     // Free variables
     for(i = 0; i < 32; i++) free(files[i]);
@@ -245,7 +253,6 @@ void compute_file(char *path, char *file){
 void compute_merge_files(char *path, char *file1, char *file2){
     int len1 = strlen(file1); 
     int len2 = strlen(file2);
-    int tmpSize = len1+len2+4;
 
     char output[len1+len2+12];
     sprintf(output, "tmp/merge.%s-%s.bwt", file1, file2);
@@ -257,3 +264,111 @@ void compute_merge_files(char *path, char *file1, char *file2){
     } else 
         fclose(tmp);
 }
+
+void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type){
+    int i,j;
+    char *ptr;
+
+    int len = strlen(path);
+    char folder[len];
+    strcpy(folder, basename(path));
+
+    char expectationDmat[FILE_PATH];
+    char entropyDmat[FILE_PATH];
+
+    if(files_n > 2){
+        ptr = strchr(path, '/');
+        if (ptr != NULL)
+            *ptr = '\0';
+
+        sprintf(expectationDmat, "results/%s_expectation", folder);
+        sprintf(entropyDmat, "results/%s_entropy", folder);
+
+        #if COVERAGE
+            char coverage_arg[FILE_PATH];
+            sprintf(coverage_arg, "_coverage_%c", coverage_type);
+            strcat(expectationDmat, coverage_arg);
+            strcat(entropyDmat, coverage_arg);
+        #endif
+
+        char extension[FILE_PATH];
+        sprintf(extension, "_k_%d.dmat", k);
+        strcat(expectationDmat, extension);
+        strcat(entropyDmat, extension);
+
+    } else {
+        sprintf(expectationDmat, "results/%s-%s_expectation", files[0], files[1]);            
+        sprintf(entropyDmat, "results/%s-%s_entropy", files[0], files[1]);            
+
+        #if COVERAGE
+            char coverage_arg[FILE_PATH];
+            sprintf(coverage_arg, "_coverage_%c", coverage_type);
+            strcat(expectationDmat, coverage_arg);
+            strcat(entropyDmat, coverage_arg);
+        #endif
+
+        char extension[FILE_PATH];
+        sprintf(extension, "_k_%d.dmat", k);
+        strcat(expectationDmat, extension);
+        strcat(entropyDmat, extension);
+    }
+
+    FILE *expectationDmatFile = fopen(expectationDmat, "w");
+    FILE *entropyDmatFile = fopen(entropyDmat, "w");
+
+    fprintf(expectationDmatFile, "[size]\n%d\n", files_n);
+
+    fprintf(expectationDmatFile, "[labels]\n");
+    for(i = 0; i < files_n; i++){
+        fprintf(expectationDmatFile, "%s ", files[i]);
+    }
+
+    fprintf(expectationDmatFile, "\n");
+
+    fprintf(expectationDmatFile, "[distances]\n");
+    for(i = 1; i < files_n; i++){
+        for(j = 0; j < i; j++){
+            fprintf(expectationDmatFile, "%lf\t", Dm[i][j]);
+        }
+        fprintf(expectationDmatFile, "\n");
+    }
+
+    fprintf(entropyDmatFile, "[size]\n%d\n", files_n);
+
+    fprintf(entropyDmatFile, "[labels]\n");
+    for(i = 0; i < files_n; i++){
+        fprintf(entropyDmatFile, "%s ", files[i]);
+    }
+
+    fprintf(entropyDmatFile, "\n");
+
+    fprintf(entropyDmatFile, "[distances]\n");
+    for(i = 1; i < files_n; i++){
+        for(j = 0; j < i; j++){
+            fprintf(entropyDmatFile, "%lf\t", De[i][j]);
+        }
+        fprintf(entropyDmatFile, "\n");
+    }
+
+    compute_newick_files(expectationDmat);
+    compute_newick_files(entropyDmat);
+
+    fclose(expectationDmatFile);
+    fclose(entropyDmatFile);
+}
+
+
+void compute_newick_files(char *dmat){
+    char dmat_newick[FILE_PATH];
+
+    char *ptr = strchr(dmat, '.');
+    if (ptr != NULL)
+        *ptr = '\0';
+
+    sprintf(dmat_newick, "utils/nj -i %s.dmat -n %s.nhx", dmat, dmat);
+
+    printf("run:\n%s\n", dmat_newick);
+
+    system(dmat_newick);
+}
+
