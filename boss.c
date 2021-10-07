@@ -118,15 +118,15 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     FILE *boss_summarized_SL_file = fopen(boss_summarized_SL, "wb");
 
     // BOSS construction variables
-    short *last = (short*)calloc(10, sizeof(short));
-    char *W = (char*)calloc(10, sizeof(char));
-    short *Wm = (short*)calloc(10,sizeof(short));
-    short *colors = (short*)calloc(10, sizeof(short));
-    int *coverage = (int*)calloc(10, sizeof(int));
-    short *summarized_LCP = (short*)calloc(10, sizeof(short));
-    short *summarized_SL = (short*)calloc(10, sizeof(short));
+    short *last = (short*)calloc(50, sizeof(short));
+    char *W = (char*)calloc(50, sizeof(char));
+    short *Wm = (short*)calloc(50,sizeof(short));
+    short *colors = (short*)calloc(50, sizeof(short));
+    int *coverage = (int*)calloc(50, sizeof(int));
+    short *summarized_LCP = (short*)calloc(50, sizeof(short));
+    short *summarized_SL = (short*)calloc(50, sizeof(short));
 
-    for(j = 0; j < 10; j++) coverage[j] = 1;
+    for(j = 0; j < 50; j++) coverage[j] = 1;
 
     int C[255] = { 0 };
 
@@ -261,15 +261,15 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             fwrite(summarized_SL, sizeof(short), Wi_size, boss_summarized_SL_file);
 
             // clean buffers
-            memset(last, 0, sizeof(short)*10);   
-            memset(W, 0, sizeof(char)*10);   
-            memset(Wm, 0, sizeof(short)*10);   
-            memset(colors, 0, sizeof(short)*10);   
-            memset(coverage, 0, sizeof(int)*10);   
-            memset(summarized_LCP, 0, sizeof(short)*10);   
-            memset(summarized_SL, 0, sizeof(short)*10);   
+            memset(last, 0, sizeof(short)*50);   
+            memset(W, 0, sizeof(char)*50);   
+            memset(Wm, 0, sizeof(short)*50);   
+            memset(colors, 0, sizeof(short)*50);   
+            memset(coverage, 0, sizeof(int)*50);   
+            memset(summarized_LCP, 0, sizeof(short)*50);   
+            memset(summarized_SL, 0, sizeof(short)*50);   
 
-            for(j = 0; j < 10; j++) coverage[j] = 1;
+            for(j = 0; j < 50; j++) coverage[j] = 1;
 
             Wi_size = 0; 
         }
