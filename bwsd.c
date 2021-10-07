@@ -108,19 +108,18 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     
     for(i = 0; i < n; i++){
 
-        if(i != 0 && i%mem == 0){
-            // todo: try to copy last value to position 0 and read mem elements from position 1 
-            fseek(colors_file, -sizeof(short), SEEK_CUR);
-            fread(colors, sizeof(short), mem+1, colors_file);
+        if(i != 0 && block_pos%mem == 0){
+            colors[0] = colors[mem];
+            fread(colors+1, sizeof(short), mem, colors_file);
 
-            fseek(summarized_LCP_file, -sizeof(short), SEEK_CUR);
-            fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
+            summarized_LCP[0] = summarized_LCP[mem];
+            fread(summarized_LCP+1, sizeof(short), mem, summarized_LCP_file);
 
-            fseek(summarized_SL_file, -sizeof(short), SEEK_CUR);
-            fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
+            summarized_SL[0] = summarized_SL[mem];
+            fread(summarized_SL+1, sizeof(short), mem, summarized_SL_file);
 
-            fseek(coverage_file, -sizeof(int), SEEK_CUR);
-            fread(coverage, sizeof(int), mem+1, coverage_file);
+            coverage[0] = coverage[mem];
+            fread(coverage+1, sizeof(int), mem, coverage_file);
 
             block_pos=0;
         }
@@ -189,9 +188,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
 
     // computes every t_(k_j), where 1 <= j <= max_freq
-    size_t *t = (size_t*) calloc((max_freq+4), sizeof(size_t));
-    short *genome0 = (short*) calloc((max_freq+4), sizeof(short));
-    short *genome1 = (short*) calloc((max_freq+4), sizeof(short));
+    size_t *t = (size_t*) calloc((max_freq+10), sizeof(size_t));
+    short *genome0 = (short*) calloc((max_freq+10), sizeof(short));
+    short *genome1 = (short*) calloc((max_freq+10), sizeof(short));
     for(i = 0; i < pos; i++){
         if(rl_freq[i] > 0){
             t[rl_freq[i]]++;

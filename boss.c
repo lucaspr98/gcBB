@@ -75,19 +75,21 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     size_t i = 0; // iterates through Wi
     int j = 0;
     size_t bi = 0; // iterates through BWT, LCP, SL and DA 
-    int block_pos = 0; // iterates through BWT, LCP, SL and DA memory blocks
+    int lcp_block_pos = 0; // iterates through LCP memory blocks
+    int other_blocks_pos = 1; // iterates through BWT, SL and DA memory blocks
+
 
     // LCP, SL, DA and BWT blocks needed for BOSS construction
     short *LCP = (short*)calloc((mem+2), sizeof(short));
-    short *SL = (short*)calloc((mem+1), sizeof(short));
-    char *DA = (char*)calloc((mem+1), sizeof(char));
-    char *BWT = (char*)calloc((mem+1), sizeof(char));
+    short *SL = (short*)calloc((mem+3), sizeof(short));
+    char *DA = (char*)calloc((mem+3), sizeof(char));
+    char *BWT = (char*)calloc((mem+3), sizeof(char));
 
     fread(LCP, sizeof(short), mem+1, mergeLCP);
-    fread(SL, sizeof(short), mem, mergeSL);
-    fread(DA, sizeof(char), mem, mergeDA);
-    fread(BWT, sizeof(char), mem, mergeBWT);
-    for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
+    fread(SL+1, sizeof(short), mem+1, mergeSL);
+    fread(DA+1, sizeof(char), mem+1, mergeDA);
+    fread(BWT+1, sizeof(char), mem+1, mergeBWT);
+    for(j = 1; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
 
     // BOSS result files
     char boss_last[FILE_PATH];
@@ -143,41 +145,50 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     while(bi < n){
 
         // read next block
-        if(bi != 0 && bi%mem == 0){
-            fseek(mergeLCP, -sizeof(short), SEEK_CUR);
-            fread(LCP, sizeof(short), mem+1, mergeLCP);
-            fread(SL, sizeof(short), mem, mergeSL);
+        if(bi != 0 && lcp_block_pos%mem == 0){
+            LCP[0] = LCP[mem];
+            fread(LCP+1, sizeof(short), mem, mergeLCP);
+
+            SL[0] = SL[mem-1]; SL[1] = SL[mem];
+            fread(SL+2, sizeof(short), mem, mergeSL);
+            
+            DA[0] = DA[mem-1]; DA[1] = DA[mem];
             fread(DA, sizeof(char), mem, mergeDA);
+            
+            BWT[0] = BWT[mem-1]; BWT[1] = BWT[mem];
             fread(BWT, sizeof(char), mem, mergeBWT);
-            for(j = 0; j < mem; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
-            block_pos = 0;
+            
+            for(j = 2; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
+            
+            lcp_block_pos = 0;
+            other_blocks_pos = 1;
         }
 
         // more than one outgoing edge of vertex i
-        if(LCP[block_pos+1] >= k && bi != n-1 ){
+        if(LCP[lcp_block_pos+1] >= k && bi != n-1 ){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            // if(BWT[block_pos] != '$'){ //change BWT[block_pos] with a new last_BWT variable (?) removed for now
-                if(Wi_freq[BWT[block_pos]] == 0){
+            // if(BWT[other_blocks_pos] != '$'){ //change BWT[other_blocks_pos] with a new last_BWT variable (?) removed for now
+                if(Wi_freq[BWT[other_blocks_pos]] == 0){
                     // Add values to BOSS representation
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 0);
+                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 0);
 
-                    Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = Wi_size;
+                    Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]] = Wi_size;
 
                     // Increment variables
-                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_freq[BWT[block_pos]]++; DA_freq[DA[block_pos]][BWT[block_pos]]++; Wi_size++; i++;
+                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++;
                     (*total_coverage)++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[block_pos]][BWT[block_pos]] == 0){
-                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 0);
+                    if(DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0){
+                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 0);
 
-                        Wi_first_occurrence[DA[block_pos]][BWT[block_pos]] = Wi_size;
+                        Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]] = Wi_size;
 
-                        C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_freq[BWT[block_pos]]++; DA_freq[DA[block_pos]][BWT[block_pos]]++; Wi_size++; i++; 
+                        C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++; 
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] which is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[block_pos]][BWT[block_pos]];
+                        int existing_pos = Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -186,36 +197,36 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
         } else {
             // just one outgoing edge of vertex i
             if(Wi_size == 0){
-                //fix SL[block_pos-1] memory leak
-                if (SL[block_pos] == 1 && dummies_freq[DA[block_pos]][BWT[block_pos]] == 0) {
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
+                //fix SL[other_blocks_pos-1] memory leak
+                if (SL[other_blocks_pos] == 1 && dummies_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0) {
+                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 1);
 
-                    dummies_freq[DA[block_pos]][BWT[block_pos]]++;
+                    dummies_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++;
 
-                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
-                } else if(SL[block_pos] > 1 && !(LCP[block_pos] == SL[block_pos-1]-1 && BWT[block_pos] == BWT[block_pos-1] && DA[block_pos] == DA[block_pos-1])){
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 1);
-                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; i++; Wi_size++;(*total_coverage)++;
+                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; i++; Wi_size++;(*total_coverage)++;
+                } else if(SL[other_blocks_pos] > 1 && !(LCP[lcp_block_pos] == SL[other_blocks_pos-1]-1 && BWT[other_blocks_pos] == BWT[other_blocks_pos-1] && DA[other_blocks_pos] == DA[other_blocks_pos-1])){
+                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 1);
+                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; i++; Wi_size++;(*total_coverage)++;
                 } 
             } 
             // last outgoing edge of vertex i
             else {
                 // check if there is already outgoing edge labeled with BWT[bi] leaving vertex i
-                if(Wi_freq[BWT[block_pos]] == 0){
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 2);
+                if(Wi_freq[BWT[other_blocks_pos]] == 0){
+                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 2);
 
-                    C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_size++; i++; 
+                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_size++; i++; 
                     (*total_coverage)++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[block_pos]][BWT[block_pos]] == 0){
-                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[block_pos]], &Wm[Wi_size], BWT[block_pos], DA[block_pos], LCP[block_pos], SL[block_pos], Wi_size, 2);
+                    if(DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0){
+                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 2);
 
-                        C[BWT[block_pos]]++; W_freq[BWT[block_pos]]++; Wi_freq[BWT[block_pos]]++; DA_freq[DA[block_pos]][BWT[block_pos]]++; Wi_size++; i++;                   
+                        C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++;                   
                         (*total_coverage)++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] which is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[block_pos]][BWT[block_pos]];
+                        int existing_pos = Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]];
                         coverage[existing_pos]++;
                         (*total_coverage)++;
                     }
@@ -232,7 +243,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
                 memset(Wi_first_occurrence, 0, sizeof(int)*samples*255);
             }
             // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
-            if(LCP[block_pos+1] < k-1){
+            if(LCP[lcp_block_pos+1] < k-1){
                 memset(W_freq, 0, sizeof(int)*255);
             }
 
@@ -262,7 +273,8 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
 
             Wi_size = 0; 
         }
-        block_pos++;
+        lcp_block_pos++;
+        other_blocks_pos++;
         bi++;
     }
 
