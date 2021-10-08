@@ -350,11 +350,12 @@ void print_distance_matrixes(double **Dm, double **De, char **files, int files_n
         fprintf(entropyDmatFile, "\n");
     }
 
-    compute_newick_files(expectationDmat);
-    compute_newick_files(entropyDmat);
 
     fclose(expectationDmatFile);
     fclose(entropyDmatFile);
+    
+    compute_newick_files(expectationDmat);
+    compute_newick_files(entropyDmat);
 }
 
 
@@ -366,8 +367,6 @@ void compute_newick_files(char *dmat){
         *ptr = '\0';
 
     sprintf(dmat_newick, "utils/nj -i %s.dmat -n %s.nhx", dmat, dmat);
-
-    printf("run:\n%s\n", dmat_newick);
 
     system(dmat_newick);
 }
