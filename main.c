@@ -11,6 +11,10 @@
 
 #define FILE_PATH 1024
 
+#ifndef COVERAGE
+	#define COVERAGE 0
+#endif
+
 void compute_file(char *path, char *file);
 
 void compute_merge_files(char *path, char *file1, char *file2);

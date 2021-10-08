@@ -20,7 +20,7 @@ bwsd.o: bwsd.c bwsd.h
 	$(CC) $(CFLAGS) $(DEFINES) bwsd.c -o bwsd.o
 
 main.o: main.c
-	$(CC) $(CFLAGS) main.c -o main.o
+	$(CC) $(CFLAGS) $(DEFINES) main.c -o main.o
 
 clean:
 	rm -f $(TARGET) $(OBJFILES) *~ && cd utils && rm *.o 
