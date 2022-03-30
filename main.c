@@ -29,11 +29,25 @@ int compare_files(const void *element1, const void *element2) {
     return strcmp(*file_1, *file_2);
 }
 
+char drosophilas_files[11][64] = {
+    "ananassae",
+    "erecta",
+    "melanogaster",
+    "mojavensis",
+    "persimilis",
+    "pseudoobscura",
+    "schellia",
+    "simulans",
+    "virilis",
+    "willistoni",
+    "yakuba"
+};
+
 int main(int argc, char *argv[]){
     int i, j;
     char **files = (char**)calloc(16, 64*sizeof(char*));
     int k = 30;
-    int files_n = 0;
+    int files_n = 11;
     char *path;
     int path_len;
     int opt;
@@ -80,6 +94,10 @@ int main(int argc, char *argv[]){
     }
 
     if(argc-valid_opts == 2){
+        for(i = 0; i < files_n; i++){
+            files[i] = malloc((strlen(drosophilas_files)+1)*sizeof(char));
+            strcpy(files[i], drosophilas_files[i]); 
+        }	 
         DIR *folder;
         struct dirent *entry;
         int len;
@@ -87,25 +105,25 @@ int main(int argc, char *argv[]){
         path = (char*)malloc((path_len+1)*sizeof(char));
         strcpy(path, argv[argc-1]);
 
-        folder = opendir(argv[argc-1]);
-        if(folder == NULL){
-            fprintf (stderr, "Unable to read directory %s\n", argv[argc-1]);
-            exit(-1);
-        }
-        while((entry=readdir(folder)) != NULL){
-            char *isFastq = strstr(entry->d_name, ".fastq");
-            char *isFasta = strstr(entry->d_name, ".fasta");
+        // folder = opendir(argv[argc-1]);
+        // if(folder == NULL){
+        //     fprintf (stderr, "Unable to read directory %s\n", argv[argc-1]);
+        //     exit(-1);
+        // }
+        // while((entry=readdir(folder)) != NULL){
+        //     char *isFastq = strstr(entry->d_name, ".fastq");
+        //     char *isFasta = strstr(entry->d_name, ".fasta");
 
-            if((isFastq && strlen(isFastq) == 6) || (isFasta && strlen(isFasta) == 6)){
-                len = strlen(entry->d_name)+1;
-                files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
+        //     if((isFastq && strlen(isFastq) == 6) || (isFasta && strlen(isFasta) == 6)){
+        //         len = strlen(entry->d_name)+1;
+        //         files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
 
-                strcpy(files[files_n], entry->d_name);
-                files_n++;
-            }
-        }
+        //         strcpy(files[files_n], entry->d_name);
+        //         files_n++;
+        //     }
+        // }
 
-        closedir(folder);
+        // closedir(folder);
     } else if(argc-valid_opts == 4){
         int file_len;
         path_len = strlen(argv[argc-3]);
@@ -138,24 +156,24 @@ int main(int argc, char *argv[]){
     /******** Compute external needed files ********/
 
     // Computes SA, BWT, LCP and DA from both files
-    for(i = 0; i < files_n; i++){
-        compute_file(path, files[i]);
-    }
+    // for(i = 0; i < files_n; i++){
+    //    compute_file(path, files[i]);
+    // }
 
     // Remove file format from the string
-    for(i = 0; i < files_n; i++){
-        char *ptr;
-        ptr = strchr(files[i], '.');
-        if (ptr != NULL)
-            *ptr = '\0';
-    }
+    // for(i = 0; i < files_n; i++){
+    //    char *ptr;
+    //    ptr = strchr(files[i], '.');
+    //    if (ptr != NULL)
+    //        *ptr = '\0';
+    // }
 
     // Computes merge of files
-    for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j]);
-        }
-    }
+    // for(i = 0; i < files_n; i++){
+    //    for(j = i+1; j < files_n; j++){
+    //        compute_merge_files(path, files[i], files[j]);
+    //    }
+    // }
 
     // Similarity matrix based on expectation
     double **Dm = (double**)malloc(files_n*sizeof(double*));
@@ -175,47 +193,53 @@ int main(int argc, char *argv[]){
         }
     }
 
-    for(i = 0; i < files_n; i++){
+    for(i = 0; i < files_n-1; i++){
         for(j = i+1; j < files_n; j++){
-            char mergeBWTFile[FILE_PATH];
-            char mergeLCPFile[FILE_PATH];
-            char mergeDAFile[FILE_PATH];
-            char mergeSLFile[FILE_PATH];
+		if(i == 1 || j == 1){
+			printf("%s-%s\n", files[i], files[j]);
+		
+                
+		char mergeBWTFile[FILE_PATH];
+                char mergeLCPFile[FILE_PATH];
+                char mergeDAFile[FILE_PATH];
+                char mergeSLFile[FILE_PATH];
 
-            sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
-            sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-            sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
-            sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
+                sprintf(mergeBWTFile, "../drosophilas_merge/merge.%s-%s.bwt", files[i], files[j]);
+                sprintf(mergeLCPFile, "../drosophilas_merge/merge.%s-%s.2.lcp", files[i], files[j]);
+                sprintf(mergeDAFile, "../drosophilas_merge/merge.%s-%s.1.cda", files[i], files[j]);
+                sprintf(mergeSLFile, "../drosophilas_merge/merge.%s-%s.2.sl", files[i], files[j]);
 
-            FILE *mergeBWT = fopen(mergeBWTFile, "r");
-            FILE *mergeLCP = fopen(mergeLCPFile, "rb");
-            FILE *mergeDA = fopen(mergeDAFile, "rb");
-            FILE *mergeSL = fopen(mergeSLFile, "rb");
+                FILE *mergeBWT = fopen(mergeBWTFile, "r");
+                FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+                FILE *mergeDA = fopen(mergeDAFile, "rb");
+                FILE *mergeSL = fopen(mergeSLFile, "rb");
 
-            fseek(mergeBWT, 0, SEEK_END);
-            size_t n = ftell(mergeBWT);
-            rewind(mergeBWT);
+                fseek(mergeBWT, 0, SEEK_END);
+                size_t n = ftell(mergeBWT);
+                rewind(mergeBWT);
+  
 
-            /******** Construct BOSS representation ********/
-            int samples = 2;
+              /******** Construct BOSS representation ********/
+	        int samples = 2;
 
-            size_t total_coverage = 0;
+                size_t total_coverage = 0;
 
-            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
+                size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
 
-            fclose(mergeBWT);
-            fclose(mergeLCP);
-            fclose(mergeDA);
+                fclose(mergeBWT);
+                fclose(mergeLCP);
+                fclose(mergeDA);
 
-            /******** Compute BWSD ********/
-            double expectation, entropy;
-            expectation = entropy = 0.0;
+                /******** Compute BWSD ********/
+                double expectation, entropy;
+                expectation = entropy = 0.0;
 
-            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
+                bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
 
-            Dm[j][i] = expectation;
-            De[j][i] = entropy;
-        }
+                Dm[j][i] = expectation;
+                De[j][i] = entropy;
+    		}
+  	  }
     }    
 
     // Print BWSD results in files .dmat and .nhx
@@ -232,6 +256,8 @@ int main(int argc, char *argv[]){
     free(De);
 
     free(path);
+
+
 }
 
 void compute_file(char *path, char *file){

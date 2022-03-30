@@ -95,12 +95,13 @@ int add_uv(graph* G, int u, int v, double w) {
 
 
 graph* gr_copy(graph* G) {
-
+  int u;
   graph* H = gr_alloc(G->type,G->n);
   if (!H) return NULL;
 
-  for (int u=0; u<G->n; u++) {
-    for (edge* e = G->V[u].N; e; e = e->next) {
+  for (u=0; u<G->n; u++) {
+    edge* e = calloc(1, sizeof(edge));
+    for (e = G->V[u].N; e; e = e->next) {
       int st = add_uv(H,u,e->term,e->w);
       if (!st) {
         gr_free(H);
@@ -111,7 +112,7 @@ graph* gr_copy(graph* G) {
 
   H->m = G->m;
 
-  for (int u=0; u<G->n; u++) {
+  for (u=0; u<G->n; u++) {
     H->V[u].flag = G->V[u].flag;
     edge *e, *f;
     for (e = G->V[u].N, f = H->V[u].N; e; e = e->next, f = f->next) {

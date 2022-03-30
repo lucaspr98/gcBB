@@ -190,7 +190,7 @@ void dmat_free(dmat* T) {
    returns NULL and errno remains set as bu malloc() on failure.
 **/
 dmat* dmat_copy(dmat* D) {
-
+  int i;
   int err;
 
   dmat* R = malloc(sizeof(dmat));
@@ -202,7 +202,7 @@ dmat* dmat_copy(dmat* D) {
     R->labels = (char**) calloc(D->n,sizeof(char*));
     if (!R->labels) goto ENOMEMH;
 
-    for (int i=0; i<D->n; i++)
+    for (i=0; i<D->n; i++)
       if (D->labels[i]) {
         R->labels[i] = strdup(D->labels[i]);
         if (!R->labels[i]) goto ENOMEMH;
@@ -214,7 +214,7 @@ dmat* dmat_copy(dmat* D) {
   R->M = (double**) ltm_alloc('d',D->n);
   if (!R->M) goto ENOMEMH;
 
-  for (int i=1; i<D->n; i++)
+  for (i=1; i<D->n; i++)
     memcpy(R->M[i],D->M[i],i*sizeof(double));
 
   return R;
@@ -326,6 +326,7 @@ dmat* dmat_read(char* filename) {
   as set by fopen().
 **/
 int dmat_write(dmat* D, int cast_to_long, char* filename) {
+  int i, j;
 
   FILE* f = fopen(filename,"w");
   if (!f) return 0;
@@ -334,15 +335,15 @@ int dmat_write(dmat* D, int cast_to_long, char* filename) {
 
   if (D->labels) {
     fprintf(f,"[labels]\n");
-    for (int i=0; i<D->n; i++) {
+    for (i=0; i<D->n; i++) {
       fprintf(f,"%s ",D->labels[i]);
     }
   }
 
   fprintf(f,"[distances]\n");
 
-  for (int i=1; i<D->n; i++) {
-    for (int j=0; j<i; j++) {
+  for (i=1; i<D->n; i++) {
+    for (j=0; j<i; j++) {
       if (cast_to_long)
         fprintf(f,"%ld ",(long) D->M[i][j]);
       else
@@ -370,7 +371,7 @@ int dmat_write(dmat* D, int cast_to_long, char* filename) {
   as set by fopen().
 **/
 int write_as_dmat(int** M, int n, char* filename) {
-
+  int i,j;
   FILE* f = fopen(filename,"w");
   if (!f) return 0;
 
@@ -378,8 +379,8 @@ int write_as_dmat(int** M, int n, char* filename) {
 
   fprintf(f,"[distances]\n");
 
-  for (int i=1; i<n; i++) {
-    for (int j=0; j<i; j++) {
+  for (i=1; i<n; i++) {
+    for(j=0; j<i; j++) {
       fprintf(f,"%d ",M[i][j]);
     }
     fprintf(f,"\n");

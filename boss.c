@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "boss.h"
 
 #define FILE_PATH 1024
@@ -78,6 +79,11 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     int lcp_block_pos = 0; // iterates through LCP memory blocks
     int other_blocks_pos = 1; // iterates through BWT, SL and DA memory blocks
 
+    // Count computation time
+    clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
 
     // LCP, SL, DA and BWT blocks needed for BOSS construction
     short *LCP = (short*)calloc((mem+2), sizeof(short));
@@ -286,6 +292,10 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     C[5] = C['N'] + C[4];
     C[0] = 0;
 
+    end = clock();
+
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+
     // Print BOSS construction info
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char info[FILE_PATH];
@@ -304,7 +314,10 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     
     FILE *info_file = fopen(info, "w");
                 
-    fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n", file1, file2);
+    fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n\n", file1, file2);
+
+    fprintf(info_file, "Boss construction time: %lf seconds\n\n", cpu_time_used);
+
     fprintf(info_file, "C array:\n");
     for(j = 0; j < 6; j++)
         fprintf(info_file, "%c %d\n", alphabet[j], C[j]);

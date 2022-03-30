@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <libgen.h>
+#include <time.h>
 #include "bwsd.h"
 
 #define FILE_PATH 1024
@@ -72,6 +73,12 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     #else
        size_t size = n+1;
     #endif
+
+    // Count computation time
+    clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
 
     short *colors = (short*)calloc((mem+2), sizeof(short));
     short *summarized_LCP = (short*)calloc((mem+2), sizeof(short));
@@ -201,7 +208,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         } 
     }
 
-    //sum termos
+    end = clock();
+
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 
     fclose(colors_file);
     fclose(summarized_LCP_file);
@@ -224,7 +233,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     FILE *info_file = fopen(info, "a+");
 
-    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n", file1, file2);
+    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
+
+    fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
 
     #if COVERAGE
         fprintf(info_file, "total_coverage = %ld\n", total_coverage);
