@@ -16,9 +16,9 @@
 	#define COVERAGE 0
 #endif
 
-void compute_file(char *path, char *file);
+void compute_file(char *path, char *file, int memory);
 
-void compute_merge_files(char *path, char *file1, char *file2);
+void compute_merge_files(char *path, char *file1, char *file2, int memory);
 
 void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k);
 
@@ -33,12 +33,12 @@ int compare_files(const void *element1, const void *element2) {
 int main(int argc, char *argv[]){
     int i, j;
     char **files = (char**)calloc(16, 64*sizeof(char*));
-    int k = 30;
+    int k = 32;
     int files_n = 0;
     char *path;
     int path_len;
     int opt;
-    int memory = 1000;
+    int memory = 2048;
     int printBoss = 0;
 
     /******** Check arguments ********/
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]){
     printf("Start computing SA, BWT and LCP for all files\n\n");
     // Computes SA, BWT, LCP and DA from both files
     for(i = 0; i < files_n; i++){
-        compute_file(path, files[i]);
+        compute_file(path, files[i], memory);
     }
 
     printf("\nAll needed arrays computed!\n");
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]){
     // Computes merge of files
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j]);
+            compute_merge_files(path, files[i], files[j], memory);
         }
     }
 
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]){
     free(path);
 }
 
-void compute_file(char *path, char *file){
+void compute_file(char *path, char *file, int memory){
     int len = strlen(file);
     char buff[len+1];
     strcpy(buff, file); 
@@ -257,7 +257,7 @@ void compute_file(char *path, char *file){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGap[FILE_PATH];
-        sprintf(eGap, "egap/eGap %s%s -m 12000 --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, file);
+        sprintf(eGap, "egap/eGap %s%s -m %d --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, memory, file);
         system(eGap);    
     } else {
         printf("%s files already computed!\n", file);
@@ -265,7 +265,7 @@ void compute_file(char *path, char *file){
     }
 }
 
-void compute_merge_files(char *path, char *file1, char *file2){
+void compute_merge_files(char *path, char *file1, char *file2, int memory){
     int len1 = strlen(file1); 
     int len2 = strlen(file2);
 
@@ -274,7 +274,7 @@ void compute_merge_files(char *path, char *file1, char *file2){
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
-        sprintf(eGapMerge, "egap/eGap -m 12000 --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m %d --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", memory, file1, file2, file1, file2);
         system(eGapMerge);    
     } else {
         printf("%s-%s merge files already computed!\n", file1, file2);
