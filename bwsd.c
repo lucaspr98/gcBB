@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <libgen.h>
+#include <time.h>
 #include "bwsd.h"
 
 #define FILE_PATH 1024
@@ -64,7 +65,7 @@ size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, size_t *
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, char coverage_type, size_t total_coverage){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage){
     size_t i;
 
     #if COVERAGE
@@ -72,6 +73,12 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     #else
        size_t size = n+1;
     #endif
+
+    // Count computation time
+    clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
 
     short *colors = (short*)calloc((mem+2), sizeof(short));
     short *summarized_LCP = (short*)calloc((mem+2), sizeof(short));
@@ -128,7 +135,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
 
         //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
-        if(coverage_type == 'e' && summarized_LCP[block_pos] >= k+1 && summarized_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
+        if(summarized_LCP[block_pos] >= k+1 && summarized_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
             if(coverage[block_pos] > coverage[block_pos+1]){
                 pos = apply_coverage_merge(coverage[block_pos], coverage[block_pos+1], rl_freq, pos);
                 if(rl_freq[pos] > max_freq)
@@ -153,14 +160,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
             if(summarized_SL[block_pos] > k){
                 if(colors[block_pos] == current){
                     rl_freq[pos]++;
-                    #if COVERAGE
-                        if(coverage_type == 'a' || (coverage_type == 'd' && summarized_LCP[block_pos] != summarized_LCP[block_pos+1]))
-                            rl_freq[pos] += coverage[block_pos]-1;
-                    #endif
                 } else {
                     if(rl_freq[pos] > max_freq)
                         max_freq = rl_freq[pos];
-
                     current = colors[block_pos];
                     pos++;
                     rl_freq[pos]=1;
@@ -201,7 +203,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         } 
     }
 
-    //sum termos
+    end = clock();
+
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 
     fclose(colors_file);
     fclose(summarized_LCP_file);
@@ -213,9 +217,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     sprintf(info, "results/%s-%s", file1, file2);
 
     #if COVERAGE
-        char coverage_arg[FILE_PATH];
-        sprintf(coverage_arg, "_coverage_%c", coverage_type);
-        strcat(info, coverage_arg);
+        strcat(info, "_coverage");
     #endif
 
     char extension[FILE_PATH];
@@ -224,7 +226,9 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     FILE *info_file = fopen(info, "a+");
 
-    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n", file1, file2);
+    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
+
+    fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
 
     #if COVERAGE
         fprintf(info_file, "total_coverage = %ld\n", total_coverage);

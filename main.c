@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <time.h>
 #include <libgen.h>
 
 #include "bwsd.h"
@@ -19,7 +20,7 @@ void compute_file(char *path, char *file);
 
 void compute_merge_files(char *path, char *file1, char *file2);
 
-void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type);
+void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k);
 
 void compute_newick_files(char* dmat);
 
@@ -38,13 +39,12 @@ int main(int argc, char *argv[]){
     int path_len;
     int opt;
     int memory = 1000;
-    char coverage_type = 'a';
     int printBoss = 0;
 
     /******** Check arguments ********/
 
     int valid_opts = 0;
-    while ((opt = getopt (argc, argv, "pk:m:c:")) != -1){
+    while ((opt = getopt (argc, argv, "pk:m:")) != -1){
         switch (opt){
             case 'p':
                 valid_opts+=1;
@@ -58,17 +58,11 @@ int main(int argc, char *argv[]){
                 valid_opts += 2;
                 memory = atoi(optarg);
                 break;
-            case 'c':
-                valid_opts += 2;
-                coverage_type = *optarg;
-                break;
             case '?':
                 if(opt == 'k')
                     fprintf (stderr, "Option -%c requires a integer value.\n", opt);
                 else if(opt == 'm')
                     fprintf (stderr, "Option -%c requires a integer value.\n", opt);
-                else if(opt == 'c')
-                    fprintf (stderr, "Option -%c requires one of the following options:\n'a': always apply coverage\n'e': apply coverage on same k-mers of distinct genomes\n'd': apply coverage in distinct k-mers", opt);
                 else if (isprint (opt))
                     fprintf (stderr, "Unknown option `-%c'.\n", opt);
                 else
@@ -137,10 +131,13 @@ int main(int argc, char *argv[]){
 
     /******** Compute external needed files ********/
 
+    printf("Start computing SA, BWT and LCP for all files\n\n");
     // Computes SA, BWT, LCP and DA from both files
     for(i = 0; i < files_n; i++){
         compute_file(path, files[i]);
     }
+
+    printf("\nAll needed arrays computed!\n");
 
     // Remove file format from the string
     for(i = 0; i < files_n; i++){
@@ -150,12 +147,16 @@ int main(int argc, char *argv[]){
             *ptr = '\0';
     }
 
+    printf("\nMerging all pairs and computing document array (cda) for each pair\n\n");
+
     // Computes merge of files
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
             compute_merge_files(path, files[i], files[j]);
         }
     }
+
+    printf("\nAll arrays merged\n");
 
     // Similarity matrix based on expectation
     double **Dm = (double**)malloc(files_n*sizeof(double*));
@@ -175,6 +176,7 @@ int main(int argc, char *argv[]){
         }
     }
 
+    printf("\nStart construction of colored BOSS and comparing genomes using BWSD for every pair\n");
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
             char mergeBWTFile[FILE_PATH];
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]){
 
             size_t total_coverage = 0;
 
-            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, coverage_type, &total_coverage);
+            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, &total_coverage);
 
             fclose(mergeBWT);
             fclose(mergeLCP);
@@ -211,15 +213,22 @@ int main(int argc, char *argv[]){
             double expectation, entropy;
             expectation = entropy = 0.0;
 
-            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, coverage_type, total_coverage);
+            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, total_coverage);
 
             Dm[j][i] = expectation;
             De[j][i] = entropy;
+
+            printf("\nFiles %s and %s colored BOSS constructed and compared\n", files[i], files[j]);
+            printf("For more details check file: results/%s-%s_k_%d.info\n", files[i], files[j], k);
         }
     }    
 
+    printf("\nAll pairs constructed and compared\n\n");
+
     // Print BWSD results in files .dmat and .nhx
-    print_distance_matrixes(Dm, De, files, files_n, path, k, coverage_type);
+    print_distance_matrixes(Dm, De, files, files_n, path, k);
+
+    printf("\nAll distance matrixes and newick files can be found in results folder\n");
 
     // Free variables
     for(i = 0; i < 32; i++) free(files[i]);
@@ -250,8 +259,10 @@ void compute_file(char *path, char *file){
         char eGap[FILE_PATH];
         sprintf(eGap, "egap/eGap %s%s -m 12000 --em --rev --lcp  --sl --slbytes 2 -o tmp/%s", path, buff, file);
         system(eGap);    
-    } else
+    } else {
+        printf("%s files already computed!\n", file);
         fclose(tmp);
+    }
 }
 
 void compute_merge_files(char *path, char *file1, char *file2){
@@ -265,11 +276,13 @@ void compute_merge_files(char *path, char *file1, char *file2){
         char eGapMerge[FILE_PATH];
         sprintf(eGapMerge, "egap/eGap -m 12000 --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", file1, file2, file1, file2);
         system(eGapMerge);    
-    } else 
+    } else {
+        printf("%s-%s merge files already computed!\n", file1, file2);
         fclose(tmp);
+    }
 }
 
-void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k, char coverage_type){
+void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k){
     int i,j;
     char *ptr;
 
@@ -289,10 +302,8 @@ void print_distance_matrixes(double **Dm, double **De, char **files, int files_n
         sprintf(entropyDmat, "results/%s_entropy", folder);
 
         #if COVERAGE
-            char coverage_arg[FILE_PATH];
-            sprintf(coverage_arg, "_coverage_%c", coverage_type);
-            strcat(expectationDmat, coverage_arg);
-            strcat(entropyDmat, coverage_arg);
+            strcat(expectationDmat, "_coverage");
+            strcat(entropyDmat, "_coverage");
         #endif
 
         char extension[FILE_PATH];
@@ -305,10 +316,8 @@ void print_distance_matrixes(double **Dm, double **De, char **files, int files_n
         sprintf(entropyDmat, "results/%s-%s_entropy", files[0], files[1]);            
 
         #if COVERAGE
-            char coverage_arg[FILE_PATH];
-            sprintf(coverage_arg, "_coverage_%c", coverage_type);
-            strcat(expectationDmat, coverage_arg);
-            strcat(entropyDmat, coverage_arg);
+            strcat(expectationDmat, "_coverage");
+            strcat(entropyDmat, "_coverage");
         #endif
 
         char extension[FILE_PATH];
@@ -358,8 +367,10 @@ void print_distance_matrixes(double **Dm, double **De, char **files, int files_n
     fclose(expectationDmatFile);
     fclose(entropyDmatFile);
     
-    compute_newick_files(expectationDmat);
+    printf("entropy newick file construction:\n");
     compute_newick_files(entropyDmat);
+    printf("expectation newick file construction:\n");
+    compute_newick_files(expectationDmat);
 }
 
 
