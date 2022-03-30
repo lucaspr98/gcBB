@@ -17,19 +17,21 @@ applications*](https://doi.org/10.1186/s13015-019-0140-0).
 The eGap repository comes within clone with flag `--recursive`
 
 ## Compile
-Use the command:
+To compile use the command:
 ```sh
 make all
 ```
-Flags:
-
-*COVERAGE*    
-    specify 1 to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
+Use the command:
+```sh
+make all COVERAGE=1
+```
+to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
 
 ## Run
 The code of gcBB provides the possibility of comparing a pair of genomes or all pairs of genomes in a collection. After running the algorithm a directory named `results/` will be created containing:
-* For each pair of genome, a file containing the BOSS representation constructed based on the merge the pair;
-* A file containing the BWSD matrixes with the expectation and shannon's entropy between all pair of genomes;
+* For each pair of genome, a file containing the BOSS representation constructed based on the merge of the pair;
+* Two files containing the BWSD matrixes with the expectation and shannon's entropy between all pair of genomes;
+* Two files containing the newick files using expectation and shannon's entropy between all pair of genomes to reconstruct the phylogeny;
 
 ### Pair of genomes comparison
 To compute the BOSS representation and the BWSD between a pair of genomes run gcBB using the command:
@@ -48,7 +50,7 @@ In directory results, there will be following files:
 
 If the coverage flag was used in make, then we will have the following files:
 
--`reads1-reads2_expectation_k_16_coverage_x.dmat` and `reads1-reads2_entropy_k_16_coverage_x.dmat`. (where x represents the coverage strategy). 
+-`reads1-reads2_expectation_k_16_coverage.dmat` and `reads1-reads2_entropy_k_16_coverage.dmat`. 
 
 ### Genome collection comparison
 To compute the BOSS representation and the BWSD between all pair of genomes from a directory run gcBB using the command:
@@ -63,16 +65,10 @@ In directory results, there will be _8*((N-1)*N/2)*_ files containing all possib
 
 ### Command line options
 *-k*    
-    specify the size of k-mers used in the BOSS construction. The default value is k=30.
+    specify the size of k-mers used in the BOSS construction. The default value is k=32.
 
 *-m*    
-    specify the size of the blocks read from the files constructed by the eGap. The default value is m=10000.
+    specify the maximum usage of ram provided to eGap and gcBB. The default value is m=2048.
 
 *-p*    
     used to print BOSS files (last, w, wm, colors, coverage, summarized\_LCP, summarized\_SL) in results directory.
-    
-*-c*    
-    specify wich coverage strategy to use:
-* a: apply coverage to all edges;
-* e: merge values from same k-mers from distinct genomes using coverege, for example: 0^3 1^2 -> 0^1 1^0 0^1 1^0 0^1;
-* d: apply coverage if the next edge k-mers is distinct from the current one;
