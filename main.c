@@ -147,14 +147,14 @@ int main(int argc, char *argv[]){
             *ptr = '\0';
     }
 
-    printf("\nMerging all pairs and computing document array (cda) for each pair\n\n");
+    // Remove / from path
+    char *ptr;
+    ptr = strchr(path, '/');
+    if (ptr != NULL)
+        *ptr = '\0';
 
-    // Computes merge of files
-    for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
-            compute_merge_files(path, files[i], files[j], memory);
-        }
-    }
+    printf("\nMerging all pairs and computing document array (cda)\n\n");
+    compute_merge_file_all(path, files, files_n, memory);
 
     printf("\nAll arrays merged\n");
 
@@ -177,53 +177,71 @@ int main(int argc, char *argv[]){
     }
 
     printf("\nStart construction of colored BOSS and comparing genomes using BWSD for every pair\n");
+    
+    char mergeBWTFile[FILE_PATH];
+    char mergeLCPFile[FILE_PATH];
+    char mergeDAFile[FILE_PATH];
+    char mergeSLFile[FILE_PATH];
+
+    sprintf(mergeBWTFile, "tmp/merge.%s.bwt", path);
+    sprintf(mergeLCPFile, "tmp/merge.%s.2.lcp", path);
+    sprintf(mergeDAFile, "tmp/merge.%s.1.cda", path);
+    sprintf(mergeSLFile, "tmp/merge.%s.2.sl", path);
+
+    FILE *mergeBWT = fopen(mergeBWTFile, "r");
+    FILE *mergeLCP = fopen(mergeLCPFile, "rb");
+    FILE *mergeDA = fopen(mergeDAFile, "rb");
+    FILE *mergeSL = fopen(mergeSLFile, "rb");
+
+    fseek(mergeBWT, 0, SEEK_END);
+    size_t n = ftell(mergeBWT);
+    rewind(mergeBWT);
+
+    /******** Construct BOSS representation ********/
+    int samples = files_n;
+
+    size_t total_coverage = 0;
+
+    size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, files_n, memory, path, printBoss, &total_coverage);
+
+    fclose(mergeBWT);
+    fclose(mergeLCP);
+    fclose(mergeDA);
+
+    printf("\nColored BOSS constructed for every genome in %s/\n", path);
+    printf("For more details check file: results/%s_k_%d.info\n", path, k);
+
+    /******** Compute BWSD ********/
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
-            char mergeBWTFile[FILE_PATH];
-            char mergeLCPFile[FILE_PATH];
-            char mergeDAFile[FILE_PATH];
-            char mergeSLFile[FILE_PATH];
-
-            sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
-            sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-            sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
-            sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
-
-            FILE *mergeBWT = fopen(mergeBWTFile, "r");
-            FILE *mergeLCP = fopen(mergeLCPFile, "rb");
-            FILE *mergeDA = fopen(mergeDAFile, "rb");
-            FILE *mergeSL = fopen(mergeSLFile, "rb");
-
-            fseek(mergeBWT, 0, SEEK_END);
-            size_t n = ftell(mergeBWT);
-            rewind(mergeBWT);
-
-            /******** Construct BOSS representation ********/
-            int samples = 2;
-
-            size_t total_coverage = 0;
-
-            size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, &total_coverage);
-
-            fclose(mergeBWT);
-            fclose(mergeLCP);
-            fclose(mergeDA);
-
-            /******** Compute BWSD ********/
             double expectation, entropy;
             expectation = entropy = 0.0;
 
-            bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, total_coverage);
+            bwsd(path, boss_len, k, &expectation, &entropy, memory, total_coverage, i, j);
 
             Dm[j][i] = expectation;
             De[j][i] = entropy;
-
-            printf("\nFiles %s and %s colored BOSS constructed and compared\n", files[i], files[j]);
-            printf("For more details check file: results/%s-%s_k_%d.info\n", files[i], files[j], k);
         }
-    }    
+    }
 
-    printf("\nAll pairs constructed and compared\n\n");
+    printf("\nAll pairs compared\n\n");
+
+    if(!printBoss){
+        char color_file_name[FILE_PATH];
+        char summarized_LCP_file_name[FILE_PATH];
+        char summarized_SL_file_name[FILE_PATH];
+        char coverage_file_name[FILE_PATH];
+
+        sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
+        sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
+        sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
+        sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
+        
+        remove(color_file_name);
+        remove(summarized_LCP_file_name);
+        remove(summarized_SL_file_name);
+        remove(coverage_file_name);
+    }
 
     // Print BWSD results in files .dmat and .nhx
     print_distance_matrixes(Dm, De, files, files_n, path, k);
@@ -265,19 +283,20 @@ void compute_file(char *path, char *file, int memory){
     }
 }
 
-void compute_merge_files(char *path, char *file1, char *file2, int memory){
-    int len1 = strlen(file1); 
-    int len2 = strlen(file2);
-
-    char output[len1+len2+12];
-    sprintf(output, "tmp/merge.%s-%s.bwt", file1, file2);
+void compute_merge_file_all(char *path, char **files, int numberOfFiles, int memory){
+    char output[strlen(path)+12];
+    sprintf(output, "tmp/merge.%s.bwt", path);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
-        sprintf(eGapMerge, "egap/eGap -m %d --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 --rev tmp/%s.bwt tmp/%s.bwt -o tmp/merge.%s-%s", memory, file1, file2, file1, file2);
+        sprintf(eGapMerge, "egap/eGap -m %d --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 ", memory);
+        for(int i = 0; i < numberOfFiles; i++)
+            sprintf(eGapMerge + strlen(eGapMerge), " tmp/%s.bwt ", files[i]);
+        sprintf(eGapMerge + strlen(eGapMerge), " -o tmp/merge.%s", path);
+        printf("%s\n", eGapMerge);
         system(eGapMerge);    
     } else {
-        printf("%s-%s merge files already computed!\n", file1, file2);
+        printf("%s merge file already computed!\n", path);
         fclose(tmp);
     }
 }
@@ -312,8 +331,8 @@ void print_distance_matrixes(double **Dm, double **De, char **files, int files_n
         strcat(entropyDmat, extension);
 
     } else {
-        sprintf(expectationDmat, "results/%s-%s_expectation", files[0], files[1]);            
-        sprintf(entropyDmat, "results/%s-%s_entropy", files[0], files[1]);            
+        sprintf(expectationDmat, "results/%s_expectation", path);            
+        sprintf(entropyDmat, "results/%s_entropy",  path);            
 
         #if COVERAGE
             strcat(expectationDmat, "_coverage");

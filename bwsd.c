@@ -65,7 +65,7 @@ size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, size_t *
     return pos;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage){
+void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int mem, size_t total_coverage, int consider1, int consider2){
     size_t i;
 
     #if COVERAGE
@@ -90,10 +90,10 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     char summarized_SL_file_name[FILE_PATH];
     char coverage_file_name[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-    sprintf(summarized_LCP_file_name, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
-    sprintf(summarized_SL_file_name, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
-    sprintf(coverage_file_name, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+    sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
+    sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
+    sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
+    sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
     
     FILE *colors_file = fopen(color_file_name, "rb");
     FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
@@ -114,6 +114,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     int block_pos = 0;
     
     for(i = 0; i < n; i++){
+        if(colors[i] != consider1 && colors[i] != consider2) continue;
 
         if(i != 0 && block_pos%mem == 0){
             colors[0] = colors[mem];
@@ -214,7 +215,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s-%s", file1, file2);
+    sprintf(info, "results/%s", path);
 
     #if COVERAGE
         strcat(info, "_coverage");
@@ -226,7 +227,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     FILE *info_file = fopen(info, "a+");
 
-    fprintf(info_file, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
+    fprintf(info_file, "BWSD info of %d and %d genomes merge:\n\n", consider1, consider2);
 
     fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
 
@@ -257,13 +258,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
 
     fprintf(info_file, "\n");
 
-    if(!printBoss){
-        remove(color_file_name);
-        remove(summarized_LCP_file_name);
-        remove(summarized_SL_file_name);
-        remove(coverage_file_name);
-    }
-
     size_t s = pos;
 
     if(rl_freq[0] == 0) s--;
@@ -275,7 +269,7 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     *entropy = bwsd_shannon_entropy(t, s, max_freq);
 
     fprintf(info_file, "expectation = %lf\n", *expectation);
-    fprintf(info_file, "entropy = %lf\n", *entropy);
+    fprintf(info_file, "entropy = %lf\n\n", *entropy);
 
     fclose(info_file);
 
