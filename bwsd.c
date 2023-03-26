@@ -108,14 +108,12 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     size_t *rl_freq = (size_t*)calloc(size, sizeof(size_t));
     size_t max_freq = 0;
 
-    int current = 0;
-    rl_freq[0] = 0;
+    int current = consider1;
+    rl_freq[consider1] = consider1;
     size_t pos = 0; // size of run_length
     int block_pos = 0;
     
-    for(i = 0; i < n; i++){
-        if(colors[i] != consider1 && colors[i] != consider2) continue;
-
+    for(i = 0; i < n; i++){     
         if(i != 0 && block_pos%mem == 0){
             colors[0] = colors[mem];
             fread(colors+1, sizeof(short), mem, colors_file);
@@ -130,6 +128,11 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
             fread(coverage+1, sizeof(int), mem, coverage_file);
 
             block_pos=0;
+        }
+
+        if(colors[block_pos] != consider1 && colors[block_pos] != consider2) {
+            block_pos++;
+            continue;
         }
 
         #if COVERAGE 
@@ -181,7 +184,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     if(colors[block_pos-1] == 0){
         rl_freq[pos] = 0;
         pos++;
-    } 
+    }
 
     // check if sum rl_freq = n;
     size_t sum_freq = 0;
