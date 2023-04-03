@@ -8,6 +8,9 @@
 
 #define FILE_PATH 1024
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #ifndef COVERAGE
 	#define COVERAGE 0
 #endif
@@ -51,18 +54,20 @@ double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
     return value;
 }
 
-size_t apply_coverage_merge(int primaryCoverage, int secondaryCoverage, size_t *rl_freq, size_t pos){
-    int repetitions = 0;
-    while(repetitions <= secondaryCoverage){
-        pos++;
-        rl_freq[pos] = 1;
-        repetitions++;
+void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos, size_t *max_freq){
+    while(zeroCoverage > 0 && oneCoverage > 0){
+        rl_freq[*pos] = 1;
+        (*pos)++;
+        rl_freq[*pos] = 1;
+        (*pos)++;
+        zeroCoverage--;
+        oneCoverage--;
     }
-    int remaining = primaryCoverage - repetitions + 1;
-    pos++;
-    rl_freq[pos] = remaining;
-
-    return pos;
+    int last = zeroCoverage == 0 ? 1 : 0;
+    rl_freq[*pos] = last ? oneCoverage : zeroCoverage;
+    *max_freq = MAX(rl_freq[*pos], *max_freq);
+    (*pos)++;
+    return;
 }
 
 void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage){
@@ -132,37 +137,35 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         }
 
         #if COVERAGE 
-        //if we have two same (k+1)-mers from distinct genomes, we break down their coverage frequencies and merge then intending to increase their similarity.
+        // If we have two same (k+1)-mers from distinct genomes, 
+        // we break down their coverage frequencies and merge then 
+        // intending to increase their similarity.
 
-        //Ex 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
-        if(summarized_LCP[block_pos] >= k+1 && summarized_LCP[block_pos+1] >= k+1 && colors[block_pos] != colors[block_pos+1] && coverage[block_pos] > 1 ){
-            if(coverage[block_pos] > coverage[block_pos+1]){
-                pos = apply_coverage_merge(coverage[block_pos], coverage[block_pos+1], rl_freq, pos);
-                if(rl_freq[pos] > max_freq)
-                    max_freq = rl_freq[pos];
-            } 
-            else if(coverage[block_pos] < coverage[block_pos+1]) {
-                pos = apply_coverage_merge(coverage[block_pos+1], coverage[block_pos], rl_freq, pos);
-                if(rl_freq[pos] > max_freq)
-                    max_freq = rl_freq[pos];
-            } else {
-                int repetitions = 0;
-                while(repetitions < coverage[block_pos]){
-                    pos++;
-                    rl_freq[pos] = 1;
-                    pos++;
-                    rl_freq[pos] = 1;
-                    repetitions++;
-                }
-            }
+        // For instance, if a (k+1)-mer occurs 4 times in genome 0
+        // and 3 times in genome 1 we have the following:
+        // 0^4 1^3 = 0^1 1^1 0^1 1^1 0^1 1^1 0^1
+
+        // We always intermix these value between 1^0 and 0^0 in 
+        // order to "separate" the intermix from the "default" bwsd.
+        // For example, 
+        // ... 0^4 1^3 ... = ... 0^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
+        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && summarized_LCP[block_pos] > k && coverage[block_pos-1] > 1 && coverage[block_pos] > 1){
+            rl_freq[pos]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
+            pos++;
+            rl_freq[pos] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
+            pos++;
+            apply_coverage_merge(coverage[block_pos-1], coverage[block_pos], rl_freq, &pos, &max_freq);
+            rl_freq[pos] = 0;
+            pos++;
+            // set current to 0 to "restart" the bwsd 0s and 1s count
+            current = 0;
         } else { 
         #endif
             if(summarized_SL[block_pos] > k){
                 if(colors[block_pos] == current){
                     rl_freq[pos]++;
                 } else {
-                    if(rl_freq[pos] > max_freq)
-                        max_freq = rl_freq[pos];
+                    max_freq = MAX(rl_freq[pos], max_freq);
                     current = colors[block_pos];
                     pos++;
                     rl_freq[pos]=1;
@@ -171,7 +174,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         #if COVERAGE
         }
         #endif
-
         block_pos++;
     }
     pos++;
