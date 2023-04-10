@@ -54,19 +54,21 @@ double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
     return value;
 }
 
-void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos, size_t *max_freq){
+void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos){
     while(zeroCoverage > 0 && oneCoverage > 0){
-        rl_freq[*pos] = 1;
-        (*pos)++;
-        rl_freq[*pos] = 1;
-        (*pos)++;
+        rl_freq[(*pos)++] = 1;
+        rl_freq[(*pos)++] = 1;
         zeroCoverage--;
         oneCoverage--;
     }
     int last = zeroCoverage == 0 ? 1 : 0;
-    rl_freq[*pos] = last ? oneCoverage : zeroCoverage;
-    *max_freq = MAX(rl_freq[*pos], *max_freq);
-    (*pos)++;
+    if(last == 1 && oneCoverage){
+        rl_freq[(*pos)++] = 0;
+        rl_freq[(*pos)++] = oneCoverage;
+    } else if(zeroCoverage) {
+        rl_freq[(*pos)++] = zeroCoverage;
+        rl_freq[(*pos)++] = 0;
+    }
     return;
 }
 
@@ -148,15 +150,11 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         // We always intermix these value between 1^0 and 0^0 in 
         // order to "separate" the intermix from the "default" bwsd.
         // For example, 
-        // ... 0^4 1^3 ... = ... 0^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
-        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && summarized_LCP[block_pos] > k && coverage[block_pos-1] > 1 && coverage[block_pos] > 1){
-            rl_freq[pos]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
-            pos++;
-            rl_freq[pos] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
-            pos++;
-            apply_coverage_merge(coverage[block_pos-1], coverage[block_pos], rl_freq, &pos, &max_freq);
-            rl_freq[pos] = 0;
-            pos++;
+        // ... 0^4 1^3 ... = ... 1^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
+        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && summarized_LCP[block_pos] > k && (coverage[block_pos-1] > 1 || coverage[block_pos] > 1)){
+            rl_freq[pos++]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
+            rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
+            apply_coverage_merge(coverage[block_pos-1], coverage[block_pos], rl_freq, &pos);
             // set current to 0 to "restart" the bwsd 0s and 1s count
             current = 0;
         } else { 
@@ -165,7 +163,6 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
                 if(colors[block_pos] == current){
                     rl_freq[pos]++;
                 } else {
-                    max_freq = MAX(rl_freq[pos], max_freq);
                     current = colors[block_pos];
                     pos++;
                     rl_freq[pos]=1;
@@ -185,9 +182,12 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     } 
 
     // check if sum rl_freq = n;
+    // update max_freq;
     size_t sum_freq = 0;
-    for(i = 0; i < pos; i++)
+    for(i = 0; i < pos; i++){
+        max_freq = MAX(rl_freq[i], max_freq);
         sum_freq += rl_freq[i];
+    }
 
     free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
 
