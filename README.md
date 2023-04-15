@@ -72,3 +72,7 @@ In directory results, there will be _8*((N-1)*N/2)*_ files containing all possib
 
 *-p*    
     used to print BOSS files (last, w, wm, colors, coverage, summarized\_LCP, summarized\_SL) in results directory.
+
+## Funding
+
+Supported by the Brazilian agencies CAPES, CNPq (grant number 406418/2021-7) and FAPEMIG (grant number APQ-01217-22).
