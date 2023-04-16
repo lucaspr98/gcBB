@@ -119,7 +119,9 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     rl_freq[consider1] = consider1;
     size_t pos = 0; // size of run_length
     int block_pos = 0;
-    
+    size_t rmq = 0;
+    size_t consider1LastPos = 0;
+
     for(i = 0; i < n; i++){     
         if(i != 0 && block_pos%mem == 0){
             colors[0] = colors[mem];
@@ -135,11 +137,6 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
             fread(coverage+1, sizeof(int), mem, coverage_file);
 
             block_pos=0;
-        }
-
-        if(colors[block_pos] != consider1 && colors[block_pos] != consider2) {
-            block_pos++;
-            continue;
         }
 
         if(colors[block_pos] != consider1 && colors[block_pos] != consider2) {
@@ -163,10 +160,10 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         // order to "separate" the intermix from the "default" bwsd.
         // For example, 
         // ... 0^4 1^3 ... = ... 1^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
-        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && rmq > k && (coverage[block_pos-1] > 1 || coverage[block_pos] > 1)){
+        if(colors[consider1LastPos] == consider1 && colors[block_pos] == consider2 && rmq > k && (coverage[consider1LastPos] > 1 || coverage[block_pos] > 1)){
             rl_freq[pos++]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
             rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
-            apply_coverage_merge(coverage[block_pos-1], coverage[block_pos], rl_freq, &pos);
+            apply_coverage_merge(coverage[consider1LastPos], coverage[block_pos], rl_freq, &pos);
             // set current to 0 to "restart" the bwsd 0s and 1s count
             current = 0;
         } else { 
@@ -183,6 +180,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         #if COVERAGE
         }
         #endif
+        if(colors[block_pos] == consider1) consider1LastPos = block_pos;
         block_pos++;
     }
     pos++;
