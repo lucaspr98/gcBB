@@ -142,6 +142,14 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
             continue;
         }
 
+        if(colors[block_pos] != consider1 && colors[block_pos] != consider2) {
+            rmq = MIN(rmq, summarized_LCP[block_pos]);
+            block_pos++;
+            continue;
+        } else {
+            rmq = summarized_LCP[block_pos];
+        }
+
         #if COVERAGE 
         // If we have two same (k+1)-mers from distinct genomes, 
         // we break down their coverage frequencies and merge then 
@@ -155,7 +163,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         // order to "separate" the intermix from the "default" bwsd.
         // For example, 
         // ... 0^4 1^3 ... = ... 1^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
-        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && summarized_LCP[block_pos] > k && (coverage[block_pos-1] > 1 || coverage[block_pos] > 1)){
+        if(colors[block_pos-1] == 0 && colors[block_pos] == 1 && rmq > k && (coverage[block_pos-1] > 1 || coverage[block_pos] > 1)){
             rl_freq[pos++]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
             rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
             apply_coverage_merge(coverage[block_pos-1], coverage[block_pos], rl_freq, &pos);
@@ -191,6 +199,13 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     for(i = 0; i < pos; i++){
         max_freq = MAX(rl_freq[i], max_freq);
         sum_freq += rl_freq[i];
+    }
+
+    size_t s = pos;
+
+    // update s removing 0's
+    for(i = 0; i < pos; i++){
+        if(rl_freq[i] == 0) s--;
     }
 
     free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
@@ -242,7 +257,8 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         fprintf(info_file, "n = %ld\n", n);
     #endif
     fprintf(info_file, "sum frequencies = %ld\n", sum_freq);
-    fprintf(info_file, "s = %ld\n\n", pos);
+
+    fprintf(info_file, "s = %ld\n\n", s);
 
     fprintf(info_file, "terms: \n");
 
@@ -262,12 +278,6 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     free(genome0); free(genome1);
 
     fprintf(info_file, "\n");
-
-    size_t s = pos;
-
-    if(rl_freq[0] == 0) s--;
-    if(rl_freq[pos-1] == 0) s--;
-
     free(rl_freq); 
 
     *expectation = bwsd_expectation(t, s, max_freq);

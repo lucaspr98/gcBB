@@ -18,7 +18,7 @@
 
 void compute_file(char *path, char *file, int memory);
 
-void compute_merge_files(char *path, char *file1, char *file2, int memory);
+void compute_merge_file_all(char *path, char **files, int numberOfFiles, int memory);
 
 void print_distance_matrixes(double **Dm, double **De, char **files, int files_n, char *path, int k);
 
