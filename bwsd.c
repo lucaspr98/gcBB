@@ -120,7 +120,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     size_t pos = 0; // size of run_length
     int block_pos = 0;
     size_t rmq = 0;
-    size_t consider1LastPos = 0;
+    size_t consider1LastPos = consider1;
 
     for(i = 0; i < n; i++){     
         if(i != 0 && block_pos%mem == 0){
