@@ -1,5 +1,6 @@
+void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, short *summarized_SL, int start, int end);
 
-void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int end);
+void fix_Wi_LCP(char *W, short *summarized_LCP, int k, int Wi_size);
 
 size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* path, int printBoss, size_t *total_coverage);
 

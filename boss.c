@@ -13,7 +13,7 @@
 
 typedef struct {
     char W;
-    short Wm, color;
+    short Wm, color, summarized_LCP, summarized_SL;
     int coverage;
 } kmer_range;
 
@@ -25,7 +25,7 @@ int compare(const void *element1, const void *element2) {
     return e1->W - e2->W;
 }
 
-void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int end){
+void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, short *summarized_SL, int start, int end){
     int i;
 
     kmer_range *values = (kmer_range*)malloc(end*sizeof(kmer_range));
@@ -34,6 +34,7 @@ void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int e
         values[i].Wm = Wm[i];
         values[i].color = colors[i];
         values[i].coverage = coverage[i];
+        values[i].summarized_SL = summarized_SL[i];
     }
 
     qsort(values, end, sizeof(kmer_range), compare);
@@ -43,9 +44,19 @@ void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, int start, int e
         Wm[i] = values[i].Wm;
         colors[i] = values[i].color;
         coverage[i] = values[i].coverage;
+        summarized_SL[i] = values[i].summarized_SL;
     }
     
     free(values);
+}
+
+void fix_Wi_LCP(char *W, short *summarized_LCP, int k, int Wi_size){
+    for(int i = 1; i < Wi_size; i++){
+        if(W[i-1] == W[i])
+            summarized_LCP[i] = k+1;
+        else 
+            summarized_LCP[i] = k;
+    }
 }
 
 void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short *summarized_SL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int Wi_size, int edge_status){
@@ -240,7 +251,8 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
                 }
                 // sort outgoing edges of vertex i in lexigraphic order 
                 if(Wi_size > 1){
-                    Wi_sort(W, Wm, colors, coverage, 0, Wi_size);
+                    Wi_sort(W, Wm, colors, coverage, summarized_SL, 0, Wi_size);
+                    fix_Wi_LCP(W, summarized_LCP, k, Wi_size);
                 }                
 
                 // clean frequency variables of outgoing edges in Wi 
