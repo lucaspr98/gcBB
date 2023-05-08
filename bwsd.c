@@ -8,8 +8,8 @@
 
 #define FILE_PATH 1024
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) ((((size_t)a)<((size_t)b))?(a):(b))
+#define MAX(a,b) ((((size_t)a)>((size_t)b))?(a):(b))
 
 #ifndef COVERAGE
 	#define COVERAGE 0
