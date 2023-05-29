@@ -8,8 +8,8 @@
 
 #define FILE_PATH 1024
 
-#define MIN(a,b) ((((size_t)a)<((size_t)b))?(a):(b))
-#define MAX(a,b) ((((size_t)a)>((size_t)b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 #ifndef COVERAGE
 	#define COVERAGE 0
@@ -87,10 +87,10 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
 
     start = clock();
 
-    short *colors = (short*)calloc((mem+2), sizeof(short));
-    short *summarized_LCP = (short*)calloc((mem+2), sizeof(short));
-    short *summarized_SL = (short*)calloc((mem+2), sizeof(short));
-    int *coverage = (int*)calloc((mem+2), sizeof(int));
+    short *colors = (short*)calloc((mem+1), sizeof(short));
+    short *summarized_LCP = (short*)calloc((mem+1), sizeof(short));
+    short *summarized_SL = (short*)calloc((mem+1), sizeof(short));
+    int *coverage = (int*)calloc((mem+1), sizeof(int));
 
     char color_file_name[FILE_PATH];
     char summarized_LCP_file_name[FILE_PATH];
@@ -107,10 +107,10 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
     FILE *coverage_file = fopen(coverage_file_name, "rb");
 
-    fread(colors, sizeof(short), mem+1, colors_file);
-    fread(summarized_LCP, sizeof(short), mem+1, summarized_LCP_file);
-    fread(summarized_SL, sizeof(short), mem+1, summarized_SL_file);
-    fread(coverage, sizeof(int), mem+1, coverage_file);
+    fread(colors, sizeof(short), mem, colors_file);
+    fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
+    fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
+    fread(coverage, sizeof(int), mem, coverage_file);
 
     size_t *rl_freq = (size_t*)calloc(size, sizeof(size_t));
     size_t max_freq = 0;
@@ -120,21 +120,20 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     size_t pos = 0; // size of run_length
     int block_pos = 0;
     size_t rmq = 0;
-    size_t consider1LastPos = consider1;
+    #if COVERAGE
+    size_t consider1LastColorValue = consider1;
+    size_t consider1LastCoverageValue = 0; 
+    #endif
 
     for(i = 0; i < n; i++){     
         if(i != 0 && block_pos%mem == 0){
-            colors[0] = colors[mem];
-            fread(colors+1, sizeof(short), mem, colors_file);
+            fread(colors, sizeof(short), mem, colors_file);
 
-            summarized_LCP[0] = summarized_LCP[mem];
-            fread(summarized_LCP+1, sizeof(short), mem, summarized_LCP_file);
+            fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
 
-            summarized_SL[0] = summarized_SL[mem];
-            fread(summarized_SL+1, sizeof(short), mem, summarized_SL_file);
+            fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
 
-            coverage[0] = coverage[mem];
-            fread(coverage+1, sizeof(int), mem, coverage_file);
+            fread(coverage, sizeof(int), mem, coverage_file);
 
             block_pos=0;
         }
@@ -160,10 +159,11 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         // order to "separate" the intermix from the "default" bwsd.
         // For example, 
         // ... 0^4 1^3 ... = ... 1^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
-        if(colors[consider1LastPos] == consider1 && colors[block_pos] == consider2 && rmq > k && (coverage[consider1LastPos] > 1 || coverage[block_pos] > 1)){
-            rl_freq[pos++]--; // decrease last 0 rl_freq because it is going to be intermixed with the current color
+        if(consider1LastColorValue == consider1 && colors[block_pos] == consider2 && rmq > k && (consider1LastCoverageValue > 1 || coverage[block_pos] > 1)){
+            rl_freq[pos] = MAX((int)(rl_freq[pos])-1, 0); // decrease last 0 rl_freq because it is going to be intermixed with the current color
+            pos++;
             rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
-            apply_coverage_merge(coverage[consider1LastPos], coverage[block_pos], rl_freq, &pos);
+            apply_coverage_merge(consider1LastCoverageValue, coverage[block_pos], rl_freq, &pos);
             // set current to 0 to "restart" the bwsd 0s and 1s count
             current = 0;
         } else { 
@@ -176,27 +176,22 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
                     pos++;
                     rl_freq[pos]=1;
                 }
+                #if COVERAGE
+                consider1LastColorValue = colors[block_pos];
+                consider1LastCoverageValue = coverage[block_pos];
+                #endif
             }
         #if COVERAGE
         }
         #endif
-        if(colors[block_pos] == consider1) consider1LastPos = block_pos;
         block_pos++;
     }
     pos++;
 
-    // if last color == 0, add 1^0
-    if(colors[block_pos-1] == 0){
-        rl_freq[pos] = 0;
-        pos++;
-    }
-
     // check if sum rl_freq = n;
     // update max_freq;
-    size_t sum_freq = 0;
     for(i = 0; i < pos; i++){
         max_freq = MAX(rl_freq[i], max_freq);
-        sum_freq += rl_freq[i];
     }
 
     size_t s = pos;
@@ -254,7 +249,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     #else
         fprintf(info_file, "n = %ld\n", n);
     #endif
-    fprintf(info_file, "sum frequencies = %ld\n", sum_freq);
+    fprintf(info_file, "pos = %ld\n\n", pos);
 
     fprintf(info_file, "s = %ld\n\n", s);
 

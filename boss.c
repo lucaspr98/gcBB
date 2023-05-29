@@ -167,13 +167,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             LCP[0] = LCP[mem];
             fread(LCP+1, sizeof(short), mem, mergeLCP);
 
-            SL[0] = SL[mem-1]; SL[1] = SL[mem];
+            SL[0] = SL[mem]; SL[1] = SL[mem+1];
             fread(SL+2, sizeof(short), mem, mergeSL);
             
-            DA[0] = DA[mem-1]; DA[1] = DA[mem];
+            DA[0] = DA[mem]; DA[1] = DA[mem+1];
             fread(DA+2, sizeof(char), mem, mergeDA);
             
-            BWT[0] = BWT[mem-1]; BWT[1] = BWT[mem];
+            BWT[0] = BWT[mem]; BWT[1] = BWT[mem+1];
             fread(BWT+2, sizeof(char), mem, mergeBWT);
             
             for(j = 2; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
