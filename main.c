@@ -16,6 +16,10 @@
 	#define COVERAGE 0
 #endif
 
+#ifndef BWSD_ALL
+	#define BWSD_ALL 1
+#endif
+
 void compute_file(char *path, char *file, int memory);
 
 void compute_merge_file_all(char *path, char **files, int numberOfFiles, int memory);
@@ -212,6 +216,7 @@ int main(int argc, char *argv[]){
     printf("For more details check file: results/%s_k_%d.info\n", path, k);
 
     /******** Compute BWSD ********/
+    #if !BWSD_ALL
     for(i = 0; i < files_n; i++){
         for(j = i+1; j < files_n; j++){
             double expectation, entropy;
@@ -223,6 +228,11 @@ int main(int argc, char *argv[]){
             De[j][i] = entropy;
         }
     }
+    #endif
+
+    #if BWSD_ALL
+    bwsd_all(path, samples, boss_len, k, boss_len, total_coverage, Dm, De);
+    #endif
 
     printf("\nAll pairs compared\n\n");
 

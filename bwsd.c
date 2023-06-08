@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <time.h>
 #include "bwsd.h"
+#include "lib/rankbv.h"
 
 #define FILE_PATH 1024
 
@@ -282,4 +283,134 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     fclose(info_file);
 
     free(t);
+}
+
+
+void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_coverage, double** Dm, double** De){
+    size_t i, j, z;;
+
+    #if COVERAGE
+        size_t size = total_coverage+1;
+    #else
+       size_t size = n+1;
+    #endif
+
+    // Count computation time
+    clock_t startClock, endClock;
+    double cpu_time_used;
+
+    startClock = clock();
+
+    short *colors = (short*)calloc((mem+1), sizeof(short));
+    short *summarized_LCP = (short*)calloc((mem+1), sizeof(short));
+    short *summarized_SL = (short*)calloc((mem+1), sizeof(short));
+    int *coverage = (int*)calloc((mem+1), sizeof(int));
+
+    char color_file_name[FILE_PATH];
+    char summarized_LCP_file_name[FILE_PATH];
+    char summarized_SL_file_name[FILE_PATH];
+    char coverage_file_name[FILE_PATH];
+
+    sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
+    sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
+    sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
+    sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
+    
+    FILE *colors_file = fopen(color_file_name, "rb");
+    FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
+    FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
+    FILE *coverage_file = fopen(coverage_file_name, "rb");
+
+    fread(colors, sizeof(short), mem, colors_file);
+    fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
+    fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
+    fread(coverage, sizeof(int), mem, coverage_file);
+
+    rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
+    for(i = 0; i < samples; i++){
+        rbv[i] = rankbv_create(n, 2);
+    }
+
+    printf("n = %ld\n", n);
+
+    printf("\n");
+    for(i = 0; i < n; i++){
+        if(summarized_SL[i] > k) rankbv_setbit(rbv[colors[i]], i);
+    }
+
+    for(i = 0; i < samples; i++)
+        rankbv_build(rbv[i]);
+
+
+    // rbv debug
+    // printf("rvb\n");
+    // for (i = 0; i < samples; i++){
+    //     printf("B_%ld = ", i);
+    //     for(j = 0; j < n; j++){
+    //         printf("%d ", rankbv_access(rbv[i], j) );
+    //     }
+    //     printf("\n");
+    // }
+    // printf("\n");
+
+    int rijSize = ((samples*(samples-1))/2)+1;
+
+    size_t (**rij) = calloc(rijSize,sizeof(*rij));
+    for(i = 0; i < rijSize; i++) rij[i] = (size_t*) calloc(n+1, sizeof(size_t));
+    size_t *rijLastPos = calloc(rijSize, sizeof(size_t));
+
+    for(i = 0; i < samples-1; i++){
+        size_t intervalStart = 0;
+        size_t intervalEnd = 0;
+        for(j = 1; intervalEnd < n; j++){
+            intervalEnd = rankbv_select1(rbv[i], j);
+            if(intervalEnd == -1) intervalEnd = n;
+            for(z = i+1; z < samples; z++){
+                int row = (((z-1)*(z))/2)+i;
+                size_t col = rijLastPos[row];
+                size_t qtd = rankbv_rank1(rbv[z], intervalEnd)-rankbv_rank1(rbv[z], intervalStart);
+                if(qtd != 0){
+                    col++;
+                    rij[row][col++] = qtd; 
+                    rij[row][col]++;
+                } else {
+                    rij[row][col]++;
+                }           
+                rijLastPos[row] = col;
+            }
+            intervalStart = intervalEnd;
+        }
+    }
+    
+    for(i = 0; i < samples-1; i++){
+        for(j = i+1; j < samples; j++){
+            int row = (((j-1)*(j))/2)+i;
+            size_t max_freq = 0;
+            size_t *t = (size_t*) calloc(n, sizeof(size_t));
+            size_t s = rijLastPos[row];
+            printf("genomes %d and %d\n", i,j);
+            printf("s = %ld\n", s);
+            for(z = 0; z < rijLastPos[row]; z++){
+                if(rij[row][z] > 0){
+                    t[rij[row][z]]++;
+                    max_freq = MAX(rij[row][z], max_freq);
+                } else {
+                    s--;
+                }
+            }
+
+            for(z = 1; z < max_freq+1; z++){
+                printf("t_%ld = %ld \n", z, t[z]);
+            }
+                printf("\n");
+
+            Dm[j][i] = bwsd_expectation(t, s, max_freq);
+            De[j][i] = bwsd_shannon_entropy(t, s, max_freq);
+        }
+    }
+
+    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
+    endClock = clock();
+
+    cpu_time_used = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
 }

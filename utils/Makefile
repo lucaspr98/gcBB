@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Wno-char-subscripts -Wno-unused-function -I/home/gpt/Dropbox/libgpt/
+CFLAGS = -g -Wall -Wno-char-subscripts -Wno-unused-function
 LIBS = -lm #-ldl 
 MCOBJ =
 USEMC = 0
