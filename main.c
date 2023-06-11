@@ -231,7 +231,7 @@ int main(int argc, char *argv[]){
     #endif
 
     #if BWSD_ALL
-    bwsd_all(path, samples, boss_len, k, boss_len, total_coverage, Dm, De);
+    bwsd_all(path, samples, boss_len, k, memory, total_coverage, Dm, De);
     #endif
 
     printf("\nAll pairs compared\n\n");

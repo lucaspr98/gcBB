@@ -321,75 +321,80 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
     FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
     FILE *coverage_file = fopen(coverage_file_name, "rb");
 
-    fread(colors, sizeof(short), mem, colors_file);
-    fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
-    fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
-    fread(coverage, sizeof(int), mem, coverage_file);
 
-    rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
-    for(i = 0; i < samples; i++){
-        rbv[i] = rankbv_create(n, 2);
-    }
-
-    printf("n = %ld\n", n);
-
-    printf("\n");
-    for(i = 0; i < n; i++){
-        if(summarized_SL[i] > k) rankbv_setbit(rbv[colors[i]], i);
-    }
-
-    for(i = 0; i < samples; i++)
-        rankbv_build(rbv[i]);
-
-
-    // rbv debug
-    // printf("rvb\n");
-    // for (i = 0; i < samples; i++){
-    //     printf("B_%ld = ", i);
-    //     for(j = 0; j < n; j++){
-    //         printf("%d ", rankbv_access(rbv[i], j) );
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-
+    // change rij directly with tij^k
     int rijSize = ((samples*(samples-1))/2)+1;
-
     size_t (**rij) = calloc(rijSize,sizeof(*rij));
-    for(i = 0; i < rijSize; i++) rij[i] = (size_t*) calloc(n+1, sizeof(size_t));
+    for(i = 0; i < rijSize; i++) rij[i] = (size_t*) calloc(size, sizeof(size_t));
     size_t *rijLastPos = calloc(rijSize, sizeof(size_t));
+    size_t *lastRank = calloc(rijSize, sizeof(size_t));
 
-    for(i = 0; i < samples-1; i++){
-        size_t intervalStart = 0;
-        size_t intervalEnd = 0;
-        for(j = 1; intervalEnd < n; j++){
-            intervalEnd = rankbv_select1(rbv[i], j);
-            if(intervalEnd == -1) intervalEnd = n;
-            for(z = i+1; z < samples; z++){
-                int row = (((z-1)*(z))/2)+i;
-                size_t col = rijLastPos[row];
-                size_t qtd = rankbv_rank1(rbv[z], intervalEnd)-rankbv_rank1(rbv[z], intervalStart);
-                if(qtd != 0){
-                    col++;
-                    rij[row][col++] = qtd; 
-                    rij[row][col]++;
-                } else {
-                    rij[row][col]++;
-                }           
-                rijLastPos[row] = col;
-            }
-            intervalStart = intervalEnd;
+    size_t blocks = ((n-1)/mem)+1;
+    while(blocks){
+        // last block
+        int readSize = blocks == 1 && mem != n ? n%mem : mem; 
+        fread(colors, sizeof(short), readSize, colors_file);
+        fread(summarized_LCP, sizeof(short), readSize, summarized_LCP_file);
+        fread(summarized_SL, sizeof(short), readSize, summarized_SL_file);
+        fread(coverage, sizeof(int), readSize, coverage_file);
+
+        rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
+        for(i = 0; i < samples; i++){
+            rbv[i] = rankbv_create(readSize, 2);
         }
+
+        for(i = 0; i < readSize; i++){
+            if(summarized_SL[i] > k) rankbv_setbit(rbv[colors[i]], i);
+        }
+
+        for(i = 0; i < samples; i++)
+            rankbv_build(rbv[i]);
+
+        for(i = 0; i < samples-1; i++){
+            size_t intervalStart = 0;
+            size_t intervalEnd = 0;
+
+            for(z = 1; intervalEnd < readSize; z++){
+                intervalEnd = rankbv_select1(rbv[i], z);
+                // last interval of the block
+                if(intervalEnd == -1) intervalEnd = readSize;
+                for(j = i+1; j < samples; j++){
+                    int row = (((j-1)*(j))/2)+i;
+                    size_t col = rijLastPos[row];
+                    size_t qtd;
+                    // workaround for first interval (?)
+                    if(intervalStart == 0) qtd = rankbv_rank1(rbv[j], intervalEnd);
+                    else qtd = rankbv_rank1(rbv[j], intervalEnd)-rankbv_rank1(rbv[j], intervalStart);
+                    // if we are looking the last interval of the block 
+                    // and the last bit of i is zero, we store the qtd
+                    // of the j's in lastRank
+                    if(intervalEnd == readSize && blocks != 1 && rankbv_access(rbv[i], readSize) != 1){
+                        lastRank[row] += qtd;
+                    } else {
+                        qtd += lastRank[row];
+                        lastRank[row] = 0;
+                        if(qtd != 0){
+                            col++;
+                            rij[row][col++] = qtd; 
+                            rij[row][col]++;
+                        } else {
+                            rij[row][col]++;
+                        }
+                        rijLastPos[row] = col;
+                    }
+                }
+                intervalStart = intervalEnd;
+            }
+        }
+        blocks--;
     }
-    
+
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
             size_t max_freq = 0;
             size_t *t = (size_t*) calloc(n, sizeof(size_t));
             size_t s = rijLastPos[row];
-            printf("genomes %d and %d\n", i,j);
-            printf("s = %ld\n", s);
             for(z = 0; z < rijLastPos[row]; z++){
                 if(rij[row][z] > 0){
                     t[rij[row][z]]++;
@@ -398,12 +403,6 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
                     s--;
                 }
             }
-
-            for(z = 1; z < max_freq+1; z++){
-                printf("t_%ld = %ld \n", z, t[z]);
-            }
-                printf("\n");
-
             Dm[j][i] = bwsd_expectation(t, s, max_freq);
             De[j][i] = bwsd_shannon_entropy(t, s, max_freq);
         }
