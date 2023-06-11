@@ -43,7 +43,7 @@ double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
 	double value = 0.0;
 	
     //n = max_t
-    for(i = 0; i < n+1; i++){
+    for(i = 1; i < n+1; i++){
         if(t[i] != 0){
             double frac = (double)t[i]/(double)s;
             value += frac*(log2(frac));
@@ -321,13 +321,14 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
     FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
     FILE *coverage_file = fopen(coverage_file_name, "rb");
 
+    int tijSize = ((samples*(samples-1))/2)+1;
 
-    // change rij directly with tij^k
-    int rijSize = ((samples*(samples-1))/2)+1;
-    size_t (**rij) = calloc(rijSize,sizeof(*rij));
-    for(i = 0; i < rijSize; i++) rij[i] = (size_t*) calloc(size, sizeof(size_t));
-    size_t *rijLastPos = calloc(rijSize, sizeof(size_t));
-    size_t *lastRank = calloc(rijSize, sizeof(size_t));
+    size_t *lastJRank = calloc(tijSize, sizeof(size_t));
+    size_t *lastIRank = calloc(tijSize, sizeof(size_t));
+
+    size_t (**tij) = calloc(tijSize, sizeof(*tij));
+    for(i = 0; i < tijSize; i++) tij[i] = (size_t*) calloc(size, sizeof(size_t));
+    size_t *tijMaxFreq = calloc(tijSize, sizeof(size_t));
 
     size_t blocks = ((n-1)/mem)+1;
     while(blocks){
@@ -360,27 +361,26 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
                 if(intervalEnd == -1) intervalEnd = readSize;
                 for(j = i+1; j < samples; j++){
                     int row = (((j-1)*(j))/2)+i;
-                    size_t col = rijLastPos[row];
                     size_t qtd;
                     // workaround for first interval (?)
                     if(intervalStart == 0) qtd = rankbv_rank1(rbv[j], intervalEnd);
                     else qtd = rankbv_rank1(rbv[j], intervalEnd)-rankbv_rank1(rbv[j], intervalStart);
                     // if we are looking the last interval of the block 
                     // and the last bit of i is zero, we store the qtd
-                    // of the j's in lastRank
+                    // of the j's in lastJRank
                     if(intervalEnd == readSize && blocks != 1 && rankbv_access(rbv[i], readSize) != 1){
-                        lastRank[row] += qtd;
+                        lastJRank[row] += qtd;
                     } else {
-                        qtd += lastRank[row];
-                        lastRank[row] = 0;
+                        qtd += lastJRank[row];
+                        lastJRank[row] = 0;
                         if(qtd != 0){
-                            col++;
-                            rij[row][col++] = qtd; 
-                            rij[row][col]++;
+                            tij[row][lastIRank[row]]++;
+                            tij[row][qtd]++;
+                            tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
+                            lastIRank[row] = 1;
                         } else {
-                            rij[row][col]++;
+                            lastIRank[row]++;
                         }
-                        rijLastPos[row] = col;
                     }
                 }
                 intervalStart = intervalEnd;
@@ -392,19 +392,12 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
-            size_t max_freq = 0;
-            size_t *t = (size_t*) calloc(n, sizeof(size_t));
-            size_t s = rijLastPos[row];
-            for(z = 0; z < rijLastPos[row]; z++){
-                if(rij[row][z] > 0){
-                    t[rij[row][z]]++;
-                    max_freq = MAX(rij[row][z], max_freq);
-                } else {
-                    s--;
-                }
+            size_t s = 0;
+            for(z = 1; z < tijMaxFreq[row]+1; z++){
+                s += tij[row][z];
             }
-            Dm[j][i] = bwsd_expectation(t, s, max_freq);
-            De[j][i] = bwsd_shannon_entropy(t, s, max_freq);
+            Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
+            De[j][i] = bwsd_shannon_entropy(tij[row], s, tijMaxFreq[row]);
         }
     }
 
