@@ -286,14 +286,8 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
 }
 
 
-void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_coverage, double** Dm, double** De){
-    size_t i, j, z;;
-
-    #if COVERAGE
-        size_t size = total_coverage+1;
-    #else
-       size_t size = n+1;
-    #endif
+void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, size_t total_coverage, double** Dm, double** De){
+    size_t i, j, z;
 
     // Count computation time
     clock_t startClock, endClock;
@@ -327,7 +321,12 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
     size_t *lastIRank = calloc(tijSize, sizeof(size_t));
 
     size_t (**tij) = calloc(tijSize, sizeof(*tij));
-    for(i = 0; i < tijSize; i++) tij[i] = (size_t*) calloc(size, sizeof(size_t));
+    for(i = 0; i < samples-1; i++){
+        for(j = i+1; j < samples; j++){
+            int row = (((j-1)*(j))/2)+i;
+            tij[row] = (size_t*) calloc(MAX(sample_size[i],sample_size[j])+2, sizeof(size_t));
+        }
+    } 
     size_t *tijMaxFreq = calloc(tijSize, sizeof(size_t));
 
     size_t blocks = ((n-1)/mem)+1;
@@ -362,13 +361,14 @@ void bwsd_all(char* path, int samples, size_t n, int k, int mem, size_t total_co
                 for(j = i+1; j < samples; j++){
                     int row = (((j-1)*(j))/2)+i;
                     size_t qtd;
-                    // workaround for first interval (?)
+                    // workaround for first interval, fail example:
+                    // B_0 = 0 1 ...
+                    // B_1 = 1 0 ...
                     if(intervalStart == 0) qtd = rankbv_rank1(rbv[j], intervalEnd);
                     else qtd = rankbv_rank1(rbv[j], intervalEnd)-rankbv_rank1(rbv[j], intervalStart);
-                    // if we are looking the last interval of the block 
-                    // and the last bit of i is zero, we store the qtd
-                    // of the j's in lastJRank
-                    if(intervalEnd == readSize && blocks != 1 && rankbv_access(rbv[i], readSize) != 1){
+                    // if we are looking the last interval of the block, 
+                    // we store the qtd of the rbv[j]'s in lastJRank
+                    if(intervalEnd == readSize && blocks != 1){
                         lastJRank[row] += qtd;
                     } else {
                         qtd += lastJRank[row];

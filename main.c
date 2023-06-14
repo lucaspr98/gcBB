@@ -205,8 +205,12 @@ int main(int argc, char *argv[]){
     int samples = files_n;
 
     size_t total_coverage = 0;
+    size_t *totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
+    size_t *totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
 
-    size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, files_n, memory, path, printBoss, &total_coverage);
+    size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, files_n, memory, path, printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
+
+    for(i = 0; i < samples; i++) printf("%ld (%ld)\n", totalSampleColorsInBoss[i], totalSampleCoverageInBoss[i]);
 
     fclose(mergeBWT);
     fclose(mergeLCP);
@@ -222,7 +226,7 @@ int main(int argc, char *argv[]){
             double expectation, entropy;
             expectation = entropy = 0.0;
 
-            bwsd(path, boss_len, k, &expectation, &entropy, memory, total_coverage, i, j);
+            bwsd(path, totalSampleColorsInBoss[i]+totalSampleColorsInBoss[j], k, &expectation, &entropy, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], i, j);
 
             Dm[j][i] = expectation;
             De[j][i] = entropy;
@@ -231,7 +235,11 @@ int main(int argc, char *argv[]){
     #endif
 
     #if BWSD_ALL
-    bwsd_all(path, samples, boss_len, k, memory, total_coverage, Dm, De);
+        #if COVERAGE
+            bwsd_all(path, samples, boss_len, totalSampleCoverageInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+        #else 
+            bwsd_all(path, samples, boss_len, totalSampleColorsInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+        #endif
     #endif
 
     printf("\nAll pairs compared\n\n");
