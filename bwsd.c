@@ -285,6 +285,18 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     free(t);
 }
 
+int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int intervalEnd){
+    int pos = intervalStart;
+    for(int z = intervalStart+1; z < intervalEnd; z++){
+        if(lcp[z] > k) {
+            pos++;
+        } else {
+            break;
+        }
+    }
+    return pos;
+}
+
 
 void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, size_t total_coverage, double** Dm, double** De){
     size_t i, j, z;
@@ -358,9 +370,11 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                 intervalEnd = rankbv_select1(rbv[i], z);
                 // last interval of the block
                 if(intervalEnd == -1) intervalEnd = readSize;
+                int lcpPos = getLastLCPGreaterThanKPos(summarized_LCP, k, intervalStart, intervalEnd);
                 for(j = i+1; j < samples; j++){
                     int row = (((j-1)*(j))/2)+i;
                     size_t qtd;
+                    int firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart)+1);
                     // workaround for first interval, fail example:
                     // B_0 = 0 1 ...
                     // B_1 = 1 0 ...
@@ -374,10 +388,28 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                         qtd += lastJRank[row];
                         lastJRank[row] = 0;
                         if(qtd != 0){
-                            tij[row][lastIRank[row]]++;
-                            tij[row][qtd]++;
-                            tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
-                            lastIRank[row] = 1;
+                            #if COVERAGE
+                                if(firstRbvJ1occurrence > intervalStart && firstRbvJ1occurrence < intervalEnd && firstRbvJ1occurrence <= lcpPos && (coverage[firstRbvJ1occurrence] > 1 || coverage[intervalStart] > 1)){
+                                    int commom =  MIN(coverage[firstRbvJ1occurrence], coverage[intervalStart]);
+                                    int difference = MAX(coverage[firstRbvJ1occurrence], coverage[intervalStart]) - commom;
+                                    tij[row][1] += commom*2;
+                                    tij[row][difference]++;
+                                    if(lastIRank[row] > 0) tij[row][lastIRank[row]-1]++;
+                                    tij[row][qtd-1]++;
+                                    tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd-1,MAX(difference, lastIRank[row]-1)));
+                                    lastIRank[row] = 1;
+                                } else {
+                                    tij[row][lastIRank[row]]++;
+                                    tij[row][qtd]++;
+                                    tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
+                                    lastIRank[row] = 1;
+                                }
+                            #else 
+                                tij[row][lastIRank[row]]++;
+                                tij[row][qtd]++;
+                                tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
+                                lastIRank[row] = 1;
+                            #endif
                         } else {
                             lastIRank[row]++;
                         }
@@ -386,6 +418,17 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                 intervalStart = intervalEnd;
             }
         }
+
+        // update tij of lastIRank on last block
+        if(blocks == 1){
+            for(i = 0; i < samples-1; i++){
+                for(j = i+1; j < samples; j++){
+                    int row = (((j-1)*(j))/2)+i;
+                    tij[row][lastIRank[row]]++;
+                }
+            }
+        }
+
         blocks--;
     }
 
@@ -393,7 +436,9 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
             size_t s = 0;
+            printf("t_{%d,%d}\n", i,j);
             for(z = 1; z < tijMaxFreq[row]+1; z++){
+                printf("t_%d = %d\n", z, tij[row][z]);
                 s += tij[row][z];
             }
             Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
