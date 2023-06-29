@@ -399,17 +399,18 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                                     tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd-1,MAX(difference, lastIRank[row]-1)));
                                     lastIRank[row] = 1;
                                 } else {
-                                    tij[row][lastIRank[row]]++;
-                                    tij[row][qtd]++;
-                                    tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
-                                    lastIRank[row] = 1;
-                                }
-                            #else 
+                            #endif 
                                 tij[row][lastIRank[row]]++;
                                 tij[row][qtd]++;
                                 tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
                                 lastIRank[row] = 1;
+                            #if COVERAGE
+                                }
                             #endif
+                            if(blocks == 1 && intervalEnd == readSize) 
+                                lastIRank[row] = 0;
+                            else 
+                                lastIRank[row] = 1;
                         } else {
                             lastIRank[row]++;
                         }
