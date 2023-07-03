@@ -202,15 +202,11 @@ int main(int argc, char *argv[]){
     rewind(mergeBWT);
 
     /******** Construct BOSS representation ********/
-    int samples = files_n;
-
     size_t total_coverage = 0;
-    size_t *totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
-    size_t *totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
+    size_t *totalSampleColorsInBoss = calloc(files_n, sizeof(size_t));
+    size_t *totalSampleCoverageInBoss = calloc(files_n, sizeof(size_t));
 
     size_t boss_len = boss_construction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, files_n, memory, path, printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
-
-    for(i = 0; i < samples; i++) printf("%ld (%ld)\n", totalSampleColorsInBoss[i], totalSampleCoverageInBoss[i]);
 
     fclose(mergeBWT);
     fclose(mergeLCP);
@@ -236,9 +232,9 @@ int main(int argc, char *argv[]){
 
     #if BWSD_ALL
         #if COVERAGE
-            bwsd_all(path, samples, boss_len, totalSampleCoverageInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+            bwsd_all(path, files_n, boss_len, totalSampleCoverageInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
         #else 
-            bwsd_all(path, samples, boss_len, totalSampleColorsInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+            bwsd_all(path, files_n, boss_len, totalSampleColorsInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
         #endif
     #endif
 

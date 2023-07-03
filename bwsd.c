@@ -341,6 +341,10 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
     } 
     size_t *tijMaxFreq = calloc(tijSize, sizeof(size_t));
 
+    size_t *iCoverage = calloc(samples, sizeof(size_t));
+    size_t *jCoverage = calloc(tijSize, sizeof(size_t));
+    int needsToFindLcpNextBlock = 1;
+
     size_t blocks = ((n-1)/mem)+1;
     while(blocks){
         // last block
@@ -367,14 +371,29 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
             size_t intervalEnd = 0;
 
             for(z = 1; intervalEnd < readSize; z++){
+                if(rankbv_access(rbv[i], intervalStart) == 1) iCoverage[i] = coverage[intervalStart];
                 intervalEnd = rankbv_select1(rbv[i], z);
                 // last interval of the block
                 if(intervalEnd == -1) intervalEnd = readSize;
-                int lcpPos = getLastLCPGreaterThanKPos(summarized_LCP, k, intervalStart, intervalEnd);
+                 int lcpPos = -1;
+                if(needsToFindLcpNextBlock){
+                    lcpPos = getLastLCPGreaterThanKPos(summarized_LCP, k, intervalStart, intervalEnd);
+                    if(lcpPos < intervalEnd && intervalEnd == readSize && rankbv_access(rbv[i], intervalEnd) == 1)
+                        needsToFindLcpNextBlock = 0;
+                }
                 for(j = i+1; j < samples; j++){
                     int row = (((j-1)*(j))/2)+i;
                     size_t qtd;
-                    int firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart)+1);
+                    int firstRbvJ1occurrence;
+                    // if the following result is 0, we are in the
+                    // start of a next block with unfinished interval
+                    if(rankbv_access(rbv[i],intervalStart) == 1) 
+                        firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart)+1);
+                    else
+                        firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart));
+                    if(lcpPos >= intervalStart && firstRbvJ1occurrence >= intervalStart && firstRbvJ1occurrence <= lcpPos){
+                        jCoverage[row] = coverage[firstRbvJ1occurrence];
+                    }
                     // workaround for first interval, fail example:
                     // B_0 = 0 1 ...
                     // B_1 = 1 0 ...
@@ -384,26 +403,25 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                     // we store the qtd of the rbv[j]'s in lastJRank
                     if(intervalEnd == readSize && blocks != 1){
                         lastJRank[row] += qtd;
+                        iCoverage[i] = coverage[intervalStart];
                     } else {
                         qtd += lastJRank[row];
                         lastJRank[row] = 0;
                         if(qtd != 0){
                             #if COVERAGE
-                                if(firstRbvJ1occurrence > intervalStart && firstRbvJ1occurrence < intervalEnd && firstRbvJ1occurrence <= lcpPos && (coverage[firstRbvJ1occurrence] > 1 || coverage[intervalStart] > 1)){
-                                    int commom =  MIN(coverage[firstRbvJ1occurrence], coverage[intervalStart]);
-                                    int difference = MAX(coverage[firstRbvJ1occurrence], coverage[intervalStart]) - commom;
+                                if((jCoverage[row] > 0 && iCoverage[i] > 0) && (jCoverage[row] != 1 || iCoverage[i] != 1)){
+                                    int commom =  MIN(jCoverage[row], iCoverage[i]);
+                                    int difference = MAX(jCoverage[row], iCoverage[i]) - commom;
                                     tij[row][1] += commom*2;
                                     tij[row][difference]++;
                                     if(lastIRank[row] > 0) tij[row][lastIRank[row]-1]++;
                                     tij[row][qtd-1]++;
                                     tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd-1,MAX(difference, lastIRank[row]-1)));
-                                    lastIRank[row] = 1;
                                 } else {
                             #endif 
                                 tij[row][lastIRank[row]]++;
                                 tij[row][qtd]++;
                                 tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));
-                                lastIRank[row] = 1;
                             #if COVERAGE
                                 }
                             #endif
@@ -414,6 +432,9 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                         } else {
                             lastIRank[row]++;
                         }
+                        jCoverage[row] = 0;
+                        iCoverage[i] = 0;
+                        needsToFindLcpNextBlock = 1;
                     }
                 }
                 intervalStart = intervalEnd;
