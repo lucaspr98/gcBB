@@ -36,6 +36,30 @@ int compare_files(const void *element1, const void *element2) {
     return strcmp(*file_1, *file_2);
 }
 
+char* getPathDirName(char *path, int len){
+    if(path[len-1] == '/'){
+        path[len-1] = '\0';
+        len--;
+    }
+    int lastSlashPos = 0;
+    int i;
+    for(i = len-1; i >= 0; i--){
+        if(path[i] == '/'){
+            lastSlashPos = i;
+            break;
+        }
+    }
+    char* dir = calloc(len, sizeof(char));
+    int j = 0;
+    lastSlashPos = path[lastSlashPos] == '/' ? lastSlashPos + 1 : lastSlashPos;
+    for(i = lastSlashPos; i < len; i++){
+        dir[j] = path[i];
+        j++;
+    }
+    printf("%s (%d)\n", dir, len);
+    return dir;
+}
+
 int main(int argc, char *argv[]){
     int i, j;
     char **files = (char**)calloc(16, 64*sizeof(char*));
@@ -153,11 +177,7 @@ int main(int argc, char *argv[]){
             *ptr = '\0';
     }
 
-    // Remove / from path
-    char *ptr;
-    ptr = strchr(path, '/');
-    if (ptr != NULL)
-        *ptr = '\0';
+    path = getPathDirName(path, path_len);
 
     printf("\nMerging all pairs and computing document array (cda)\n\n");
 
