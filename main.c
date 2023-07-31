@@ -54,7 +54,6 @@ char* getPathDirName(char *path, int len){
         dir[j] = path[i];
         j++;
     }
-    printf("%s (%d)\n", dir, len);
     return dir;
 }
 
@@ -252,11 +251,13 @@ int main(int argc, char *argv[]){
 
     #if BWSD_ALL
         #if COVERAGE
-            bwsd_all(path, files_n, boss_len, totalSampleCoverageInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+            bwsd_all(path, files_n, boss_len, totalSampleCoverageInBoss, k, memory, Dm, De);
         #else 
-            bwsd_all(path, files_n, boss_len, totalSampleColorsInBoss, k, memory, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], Dm, De);
+            bwsd_all(path, files_n, boss_len, totalSampleColorsInBoss, k, memory, Dm, De);
         #endif
     #endif
+
+    free(totalSampleCoverageInBoss); free(totalSampleColorsInBoss);
 
     printf("\nAll pairs compared\n\n");
 

@@ -338,7 +338,7 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     
     FILE *info_file = fopen(info, "w");
                 
-    fprintf(info_file, "Boss construction info of genoms from %s merge:\n\n", path);
+    fprintf(info_file, "Boss construction info of genomes from %s merge:\n\n", path);
 
     fprintf(info_file, "Boss construction time: %lf seconds\n\n", cpu_time_used);
 

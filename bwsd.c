@@ -298,7 +298,7 @@ int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int interval
 }
 
 
-void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, size_t total_coverage, double** Dm, double** De){
+void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, double** Dm, double** De){
     size_t i, j, z;
 
     // Count computation time
@@ -451,25 +451,58 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
             }
         }
 
+        for(i = 0; i < samples; i++) rankbv_free(rbv[i]);
+        rankbv_free(rbv);
+
         blocks--;
     }
+
+    free(lastJRank); free(lastIRank); free(iCoverage); free(jCoverage);
+
+    char info[FILE_PATH];
+
+    sprintf(info, "results/%s", path);
+
+    #if COVERAGE
+        strcat(info, "_coverage");
+    #endif
+
+    char extension[FILE_PATH];
+    sprintf(extension, "_k_%d.info", k);
+    strcat(info, extension);
+
+    FILE *info_file = fopen(info, "a+");
+
+    fprintf(info_file, "BWSD construction info of genomes from %s merge:\n\n", path);
 
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
             size_t s = 0;
-            printf("t_{%d,%d}\n", i,j);
+            fprintf(info_file, "t_{%d,%d}\n", i,j);
             for(z = 1; z < tijMaxFreq[row]+1; z++){
-                printf("t_%d = %d\n", z, tij[row][z]);
+                fprintf(info_file, "t_%d = %d\n", z, tij[row][z]);
                 s += tij[row][z];
             }
+            fprintf(info_file, "\n");
             Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
             De[j][i] = bwsd_shannon_entropy(tij[row], s, tijMaxFreq[row]);
         }
     }
 
-    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
+    for(i = 0; i < tijSize; i++)
+        free(tij[i]);
+    free(tij); 
+    
+
+    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL); free(tijMaxFreq); 
     endClock = clock();
 
     cpu_time_used = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
+
+    fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
+
+    fprintf(info_file, "\n");
+
+    fclose(info_file);
 }
