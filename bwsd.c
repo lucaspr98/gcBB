@@ -487,7 +487,7 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
                     s += tij[row][z];
                 // }
             }
-            fprintf(info_file, "\n");
+            // fprintf(info_file, "\n");
             Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
             De[j][i] = bwsd_shannon_entropy(tij[row], s, tijMaxFreq[row]);
         }
