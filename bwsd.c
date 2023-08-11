@@ -479,12 +479,13 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
             size_t s = 0;
-            fprintf(info_file, "t_{%d,%d}\n", i,j);
+            // TODO: print only on debug
+            // fprintf(info_file, "t_{%d,%d}\n", i,j);
             for(z = 1; z < tijMaxFreq[row]+1; z++){
-                if(tij[row][z] != 0){
-                    fprintf(info_file, "t_%d = %d\n", z, tij[row][z]);
+                // if(tij[row][z] != 0){
+                    // fprintf(info_file, "t_%d = %d\n", z, tij[row][z]);
                     s += tij[row][z];
-                }
+                // }
             }
             fprintf(info_file, "\n");
             Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
