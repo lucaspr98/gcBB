@@ -4,8 +4,9 @@ OBJFILES = main.o boss.o bwsd.o
 TARGET = gcBB
 
 COVERAGE = 0
+BOSS_ALL = 0
 
-DEFINES = -DCOVERAGE=$(COVERAGE)
+DEFINES = -DCOVERAGE=$(COVERAGE) -DBOSS_ALL=$(BOSS_ALL)
 
 all: $(TARGET)
 	make -C egap/ && make -C utils/

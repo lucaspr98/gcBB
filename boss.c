@@ -5,9 +5,14 @@
 #include "boss.h"
 
 #define FILE_PATH 1024
+#define ALPHABET_SIZE 255
 
 #ifndef COVERAGE
 	#define COVERAGE 0
+#endif
+
+#ifndef BOSS_ALL
+	#define BOSS_ALL 0
 #endif
 
 typedef struct {
@@ -117,13 +122,25 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char boss_summarized_LCP[FILE_PATH];
     char boss_summarized_SL[FILE_PATH];
 
-    sprintf(boss_last, "results/%s-%s_k_%d.2.last", file1, file2, k);
-    sprintf(boss_w, "results/%s-%s_k_%d.1.W", file1, file2, k);
-    sprintf(boss_wm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
-    sprintf(boss_colors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-    sprintf(boss_coverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
-    sprintf(boss_summarized_LCP, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
-    sprintf(boss_summarized_SL, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+    #if BOSS_ALL
+        
+        sprintf(boss_last, "results/%s_k_%d.2.last", file1, k);
+        sprintf(boss_w, "results/%s_k_%d.1.W", file1, k);
+        sprintf(boss_wm, "results/%s_k_%d.2.Wm", file1, k);
+        sprintf(boss_colors, "results/%s_k_%d.2.colors", file1, k);
+        sprintf(boss_coverage, "results/%s_k_%d.4.coverage", file1, k);
+        sprintf(boss_summarized_LCP, "results/%s_k_%d.2.summarized_LCP", file1, k);
+        sprintf(boss_summarized_SL, "results/%s_k_%d.2.summarized_SL", file1, k);
+    #else
+        sprintf(boss_last, "results/%s-%s_k_%d.2.last", file1, file2, k);
+        sprintf(boss_w, "results/%s-%s_k_%d.1.W", file1, file2, k);
+        sprintf(boss_wm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
+        sprintf(boss_colors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+        sprintf(boss_coverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+        sprintf(boss_summarized_LCP, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+        sprintf(boss_summarized_SL, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+    #endif
+    
 
     FILE *boss_last_file = fopen(boss_last, "wb");
     FILE *boss_w_file = fopen(boss_w, "wb");
@@ -145,19 +162,19 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
 
     for(j = 0; j < 50; j++) coverage[j] = 1;
 
-    int C[255] = { 0 };
+    int C[ALPHABET_SIZE] = { 0 };
 
     // BOSS construction auxiliary variables 
     int Wi_size = 0; 
-    int W_freq[255] = { 0 }; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
-    int Wi_freq[255] = { 0 }; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
-    int Wi_first_occurrence[samples][255]; // first occurence of an outgoing edge in a k-mer suffix range from a string collection
-    memset(Wi_first_occurrence, 0,  sizeof(int)*samples*255);
-    int DA_freq[samples][255]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
-    memset(DA_freq, 0,  sizeof(int)*samples*255);
+    int W_freq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
+    int Wi_freq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
+    int Wi_first_occurrence[samples][ALPHABET_SIZE]; // first occurence of an outgoing edge in a k-mer suffix range from a string collection
+    memset(Wi_first_occurrence, 0,  sizeof(int)*samples*ALPHABET_SIZE);
+    int DA_freq[samples][ALPHABET_SIZE]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
+    memset(DA_freq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
 
-    int dummies_freq[samples][255]; // frequency of outgoing edges from dummy inputs of size 1 ($)
-    memset(dummies_freq, 0,  sizeof(int)*samples*255);
+    int dummies_freq[samples][ALPHABET_SIZE]; // frequency of outgoing edges from dummy inputs of size 1 ($)
+    memset(dummies_freq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
 
     while(bi < n){
 
@@ -166,13 +183,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             LCP[0] = LCP[mem];
             fread(LCP+1, sizeof(short), mem, mergeLCP);
 
-            SL[0] = SL[mem-1]; SL[1] = SL[mem];
+            SL[0] = SL[mem]; SL[1] = SL[mem+1];
             fread(SL+2, sizeof(short), mem, mergeSL);
             
-            DA[0] = DA[mem-1]; DA[1] = DA[mem];
+            DA[0] = DA[mem]; DA[1] = DA[mem+1];
             fread(DA+2, sizeof(char), mem, mergeDA);
             
-            BWT[0] = BWT[mem-1]; BWT[1] = BWT[mem];
+            BWT[0] = BWT[mem]; BWT[1] = BWT[mem+1];
             fread(BWT+2, sizeof(char), mem, mergeBWT);
             
             for(j = 2; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
@@ -255,14 +272,14 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
                 }                
 
                 // clean frequency variables of outgoing edges in Wi 
-                memset(Wi_freq, 0, sizeof(int)*255);   
-                memset(DA_freq, 0, sizeof(int)*samples*255);
-                memset(dummies_freq, 0, sizeof(int)*samples*255);
-                memset(Wi_first_occurrence, 0, sizeof(int)*samples*255);
+                memset(Wi_freq, 0, sizeof(int)*ALPHABET_SIZE);   
+                memset(DA_freq, 0, sizeof(int)*samples*ALPHABET_SIZE);
+                memset(dummies_freq, 0, sizeof(int)*samples*ALPHABET_SIZE);
+                memset(Wi_first_occurrence, 0, sizeof(int)*samples*ALPHABET_SIZE);
             }
             // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
             if(LCP[lcp_block_pos+1] < k-1){
-                memset(W_freq, 0, sizeof(int)*255);
+                memset(W_freq, 0, sizeof(int)*ALPHABET_SIZE);
             }
 
             // Write Wi in BOSS results files
@@ -312,10 +329,18 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s-%s", file1, file2);
+    #if BOSS_ALL
+        sprintf(info, "results/%s", file1);
+    #else
+        sprintf(info, "results/%s-%s", file1, file2);   
+    #endif
 
     #if COVERAGE
         strcat(info, "_coverage");
+    #endif
+
+    #if BOSS_ALL
+        strcat(info, "_bossall");
     #endif
 
     char extension[FILE_PATH];
@@ -323,8 +348,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     strcat(info, extension);
     
     FILE *info_file = fopen(info, "w");
-                
-    fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n\n", file1, file2);
+
+    #if BOSS_ALL
+        fprintf(info_file, "Boss construction info of genoms from %s merge:\n\n", file1);
+    #else
+        fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n\n", file1, file2);   
+    #endif   
+   
 
     fprintf(info_file, "Boss construction time: %lf seconds\n\n", cpu_time_used);
 
