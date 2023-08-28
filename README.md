@@ -21,12 +21,15 @@ To compile use the command:
 ```sh
 make all
 ```
-Use the command:
-```sh
-make all COVERAGE=1
-```
-to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
+Options:
+* `COVERAGE=1` to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
+* `BOSS_ALL=1` to make eGap compute and merge all genomes instead of pairwise, constructs only one BOSS struct for all genomes in the collection. The default value is BOSS_ALL=0.
 
+Example:
+```sh
+make all BOSS_ALL=1 COVERAGE=1
+```
+**Obs**: use `make clean` command before `make all` with new options. 
 ## Run
 The code of gcBB provides the possibility of comparing a pair of genomes or all pairs of genomes in a collection. After running the algorithm a directory named `results/` will be created containing:
 * For each pair of genome, a file containing the BOSS representation constructed based on the merge of the pair;
@@ -68,7 +71,7 @@ In directory results, there will be _8*((N-1)*N/2)*_ files containing all possib
     specify the size of k-mers used in the BOSS construction. The default value is k=32.
 
 *-m*    
-    specify the maximum usage of ram provided to eGap and gcBB. The default value is m=2048.
+    specify the maximum usage of ram in MB provided to eGap and gcBB. The default value is m=2048.
 
 *-p*    
     used to print BOSS files (last, w, wm, colors, coverage, summarized\_LCP, summarized\_SL) in results directory.

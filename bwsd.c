@@ -15,6 +15,10 @@
 	#define COVERAGE 0
 #endif
 
+#ifndef BOSS_ALL
+	#define BOSS_ALL 0
+#endif
+
 double log2(double i){
 
 	return log(i)/log(2);
@@ -72,9 +76,8 @@ void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, si
     return;
 }
 
-void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int mem, size_t total_coverage, int consider1, int consider2){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage, int consider1, int consider2){
     size_t i;
-
     #if COVERAGE
         size_t size = total_coverage+1;
     #else
@@ -97,10 +100,17 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     char summarized_SL_file_name[FILE_PATH];
     char coverage_file_name[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
-    sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
-    sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
-    sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
+    #if BOSS_ALL
+        sprintf(color_file_name, "results/%s_k_%d.2.colors", file1, k);
+        sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", file1, k);
+        sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", file1, k);
+        sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", file1, k);
+    #else
+        sprintf(color_file_name, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+        sprintf(summarized_LCP_file_name, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+        sprintf(summarized_SL_file_name, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+        sprintf(coverage_file_name, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+    #endif
     
     FILE *colors_file = fopen(color_file_name, "rb");
     FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
@@ -226,9 +236,22 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     fclose(summarized_SL_file);
     fclose(coverage_file);
 
+    #if !BOSS_ALL
+        if(!printBoss){
+            remove(color_file_name);
+            remove(summarized_LCP_file_name);
+            remove(summarized_SL_file_name);
+            remove(coverage_file_name);
+        }
+    #endif
+
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s", path);
+    #if BOSS_ALL
+        sprintf(info, "results/%s", file1);
+    #else
+        sprintf(info, "results/%s-%s", file1, file2);
+    #endif
 
     #if COVERAGE
         strcat(info, "_coverage");
@@ -240,7 +263,11 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
 
     FILE *info_file = fopen(info, "a+");
 
-    fprintf(info_file, "BWSD info of %d and %d genomes merge:\n\n", consider1, consider2);
+    #if BOSS_ALL
+        fprintf(info_file, "BWSD info of %d and %d genomes merge:\n\n", consider1, consider2);
+    #else
+        fprintf(info_file, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
+    #endif
 
     fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
 
@@ -277,7 +304,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     *entropy = bwsd_shannon_entropy(t, s, max_freq);
 
     fprintf(info_file, "expectation = %lf\n", *expectation);
-    fprintf(info_file, "entropy = %lf\n\n", *entropy);
+    fprintf(info_file, "entropy = %lf\n", *entropy);
 
     fclose(info_file);
 

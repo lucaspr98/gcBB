@@ -11,6 +11,10 @@
 	#define COVERAGE 0
 #endif
 
+#ifndef BOSS_ALL
+	#define BOSS_ALL 0
+#endif
+
 typedef struct {
     char W;
     short Wm, color, summarized_LCP, summarized_SL;
@@ -83,7 +87,7 @@ void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char *path, int printBoss, size_t *total_coverage){
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *total_coverage){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
@@ -118,13 +122,25 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char boss_summarized_LCP[FILE_PATH];
     char boss_summarized_SL[FILE_PATH];
 
-    sprintf(boss_last, "results/%s_k_%d.2.last", path, k);
-    sprintf(boss_w, "results/%s_k_%d.1.W", path, k);
-    sprintf(boss_wm, "results/%s_k_%d.2.Wm", path, k);
-    sprintf(boss_colors, "results/%s_k_%d.2.colors", path, k);
-    sprintf(boss_coverage, "results/%s_k_%d.4.coverage", path, k);
-    sprintf(boss_summarized_LCP, "results/%s_k_%d.2.summarized_LCP", path, k);
-    sprintf(boss_summarized_SL, "results/%s_k_%d.2.summarized_SL", path, k);
+    #if BOSS_ALL
+        
+        sprintf(boss_last, "results/%s_k_%d.2.last", file1, k);
+        sprintf(boss_w, "results/%s_k_%d.1.W", file1, k);
+        sprintf(boss_wm, "results/%s_k_%d.2.Wm", file1, k);
+        sprintf(boss_colors, "results/%s_k_%d.2.colors", file1, k);
+        sprintf(boss_coverage, "results/%s_k_%d.4.coverage", file1, k);
+        sprintf(boss_summarized_LCP, "results/%s_k_%d.2.summarized_LCP", file1, k);
+        sprintf(boss_summarized_SL, "results/%s_k_%d.2.summarized_SL", file1, k);
+    #else
+        sprintf(boss_last, "results/%s-%s_k_%d.2.last", file1, file2, k);
+        sprintf(boss_w, "results/%s-%s_k_%d.1.W", file1, file2, k);
+        sprintf(boss_wm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
+        sprintf(boss_colors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+        sprintf(boss_coverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+        sprintf(boss_summarized_LCP, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+        sprintf(boss_summarized_SL, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+    #endif
+    
 
     FILE *boss_last_file = fopen(boss_last, "wb");
     FILE *boss_w_file = fopen(boss_w, "wb");
@@ -313,10 +329,18 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
     char info[FILE_PATH];
 
-    sprintf(info, "results/%s", path);
+    #if BOSS_ALL
+        sprintf(info, "results/%s", file1);
+    #else
+        sprintf(info, "results/%s-%s", file1, file2);   
+    #endif
 
     #if COVERAGE
         strcat(info, "_coverage");
+    #endif
+
+    #if BOSS_ALL
+        strcat(info, "_bossall");
     #endif
 
     char extension[FILE_PATH];
@@ -324,8 +348,13 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     strcat(info, extension);
     
     FILE *info_file = fopen(info, "w");
-                
-    fprintf(info_file, "Boss construction info of genoms from %s merge:\n\n", path);
+
+    #if BOSS_ALL
+        fprintf(info_file, "Boss construction info of genoms from %s merge:\n\n", file1);
+    #else
+        fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n\n", file1, file2);   
+    #endif   
+   
 
     fprintf(info_file, "Boss construction time: %lf seconds\n\n", cpu_time_used);
 

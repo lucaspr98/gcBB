@@ -2,7 +2,7 @@ void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, short *summarize
 
 void fix_Wi_LCP(char *W, short *summarized_LCP, int k, int Wi_size);
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* path, int printBoss, size_t *total_coverage);
+size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *total_coverage);
 
 /* edge_status:
    0: any outgoing edge besides the last one
