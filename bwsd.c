@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <time.h>
 #include "bwsd.h"
+#include "external.h"
 #include "lib/rankbv.h"
 
 #define FILE_PATH 1024
@@ -12,17 +13,11 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-#ifndef COVERAGE
-	#define COVERAGE 0
-#endif
-
 double log2(double i){
-
 	return log(i)/log(2);
-
 }
 
-double bwsd_expectation(size_t *t, size_t s, size_t n){
+double bwsdExpectation(size_t *t, size_t s, size_t n){
     size_t i;
 	double value = 0.0;
     double frac;
@@ -38,7 +33,7 @@ double bwsd_expectation(size_t *t, size_t s, size_t n){
     return value-1.0;
 }
 
-double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
+double bwsdShannonEntropy(size_t *t, size_t s, size_t n){
     size_t i;
 	double value = 0.0;
 	
@@ -55,7 +50,7 @@ double bwsd_shannon_entropy(size_t *t, size_t s, size_t n){
     return value;
 }
 
-void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos){
+void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos){
     while(zeroCoverage > 0 && oneCoverage > 0){
         rl_freq[(*pos)++] = 1;
         rl_freq[(*pos)++] = 1;
@@ -73,9 +68,8 @@ void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, si
     return;
 }
 
-void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int mem, size_t total_coverage, int consider1, int consider2){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage, int consider1, int consider2){
     size_t i;
-
     #if COVERAGE
         size_t size = total_coverage+1;
     #else
@@ -98,10 +92,10 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
     char summarized_SL_file_name[FILE_PATH];
     char coverage_file_name[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
-    sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
-    sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
-    sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
+    sprintf(color_file_name, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+    sprintf(summarized_LCP_file_name, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
+    sprintf(summarized_SL_file_name, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+    sprintf(coverage_file_name, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
     
     FILE *colors_file = fopen(color_file_name, "rb");
     FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
@@ -164,7 +158,7 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
             rl_freq[pos] = MAX((int)(rl_freq[pos])-1, 0); // decrease last 0 rl_freq because it is going to be intermixed with the current color
             pos++;
             rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
-            apply_coverage_merge(consider1LastCoverageValue, coverage[block_pos], rl_freq, &pos);
+            applyCoverageMerge(consider1LastCoverageValue, coverage[block_pos], rl_freq, &pos);
             // set current to 0 to "restart" the bwsd 0s and 1s count
             current = 0;
         } else { 
@@ -218,71 +212,72 @@ void bwsd(char* path, size_t n, int k, double *expectation, double *entropy, int
         } 
     }
 
-    end = clock();
-
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    *expectation = bwsdExpectation(t, s, max_freq);
+    *entropy = bwsdShannonEntropy(t, s, max_freq);
 
     fclose(colors_file);
     fclose(summarized_LCP_file);
     fclose(summarized_SL_file);
     fclose(coverage_file);
+    
+    if(!printBoss){
+        remove(color_file_name);
+        remove(summarized_LCP_file_name);
+        remove(summarized_SL_file_name);
+        remove(coverage_file_name);
+    }
 
-    char info[FILE_PATH];
+    FILE* infoFile = getInfoFile(file1, file2, k, 1);
 
-    sprintf(info, "results/%s", path);
-
-    #if COVERAGE
-        strcat(info, "_coverage");
+    #if DEBUG
+    printBWSDDebug(infoFile, file1, file2, total_coverage, n, pos, s, max_freq, t, genome0, genome1);
     #endif
 
-    char extension[FILE_PATH];
-    sprintf(extension, "_k_%d.info", k);
-    strcat(info, extension);
+    free(rl_freq); 
+    free(genome0); free(genome1);
+    free(t);
 
-    FILE *info_file = fopen(info, "a+");
+    end = clock();
 
-    fprintf(info_file, "BWSD info of %d and %d genomes merge:\n\n", consider1, consider2);
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-    fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
+    printf("BWSD computation time: %lf seconds\n", cpu_time_used);
 
+    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpu_time_used);
+
+    fclose(infoFile);
+
+    return;
+}
+
+void printBWSDDebug(FILE* infoFile, char* file1, char* file2, size_t total_coverage, size_t n, size_t pos, size_t s, size_t max_freq, size_t* t, short* genome0, short* genome1){
+    size_t i;
+
+    fprintf(infoFile, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
     #if COVERAGE
-        fprintf(info_file, "total_coverage = %ld\n", total_coverage);
+        fprintf(infoFile, "total_coverage = %ld\n", total_coverage);
     #else
-        fprintf(info_file, "n = %ld\n", n);
+        fprintf(infoFile, "n = %ld\n", n);
     #endif
-    fprintf(info_file, "pos = %ld\n\n", pos);
+    fprintf(infoFile, "pos = %ld\n\n", pos);
 
-    fprintf(info_file, "s = %ld\n\n", s);
+    fprintf(infoFile, "s = %ld\n\n", s);
 
-    fprintf(info_file, "terms: \n");
+    fprintf(infoFile, "terms: \n");
 
     for(i = 0; i < max_freq+1; i++){
         if(t[i] != 0){
-            fprintf(info_file, "t_%ld = %ld (", i, t[i]);
+            fprintf(infoFile, "t_%ld = %ld (", i, t[i]);
             if(genome0[i])
-                fprintf(info_file, "0");
+                fprintf(infoFile, "0");
             if(genome0[i] && genome1[i])
-                fprintf(info_file, ",");
+                fprintf(infoFile, ",");
             if(genome1[i])
-                fprintf(info_file, "1");    
-            fprintf(info_file, ")\n");
+                fprintf(infoFile, "1");    
+            fprintf(infoFile, ")\n");
         }
     }
-
-    free(genome0); free(genome1);
-
-    fprintf(info_file, "\n");
-    free(rl_freq); 
-
-    *expectation = bwsd_expectation(t, s, max_freq);
-    *entropy = bwsd_shannon_entropy(t, s, max_freq);
-
-    fprintf(info_file, "expectation = %lf\n", *expectation);
-    fprintf(info_file, "entropy = %lf\n\n", *entropy);
-
-    fclose(info_file);
-
-    free(t);
+    fprintf(infoFile, "\n");
 }
 
 int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int intervalEnd){
@@ -298,7 +293,7 @@ int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int interval
 }
 
 
-void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, double** Dm, double** De){
+void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, double** Dm, double** De){
     size_t i, j, z;
 
     // Count computation time
@@ -459,53 +454,53 @@ void bwsd_all(char* path, int samples, size_t n, size_t *sample_size, int k, int
 
     free(lastJRank); free(lastIRank); free(iCoverage); free(jCoverage);
 
-    char info[FILE_PATH];
-
-    sprintf(info, "results/%s", path);
-
-    #if COVERAGE
-        strcat(info, "_coverage");
-    #endif
-
-    char extension[FILE_PATH];
-    sprintf(extension, "_k_%d.info", k);
-    strcat(info, extension);
-
-    FILE *info_file = fopen(info, "a+");
-
-    fprintf(info_file, "BWSD construction info of genomes from %s merge:\n\n", path);
-
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
             size_t s = 0;
-            // TODO: print only on debug
-            // fprintf(info_file, "t_{%d,%d}\n", i,j);
-            for(z = 1; z < tijMaxFreq[row]+1; z++){
-                // if(tij[row][z] != 0){
-                    // fprintf(info_file, "t_%d = %d\n", z, tij[row][z]);
-                    s += tij[row][z];
-                // }
-            }
-            // fprintf(info_file, "\n");
-            Dm[j][i] = bwsd_expectation(tij[row], s, tijMaxFreq[row]);
-            De[j][i] = bwsd_shannon_entropy(tij[row], s, tijMaxFreq[row]);
+            for(z = 1; z < tijMaxFreq[row]+1; z++) s += tij[row][z];
+            Dm[j][i] = bwsdExpectation(tij[row], s, tijMaxFreq[row]);
+            De[j][i] = bwsdShannonEntropy(tij[row], s, tijMaxFreq[row]);
         }
     }
+
+    FILE *infoFile = getInfoFile(path, NULL, k, 1);
+
+    #if DEBUG
+    printBWSDALLDebug(infoFile, path, samples, tijMaxFreq, tij);
+    #endif
 
     for(i = 0; i < tijSize; i++)
         free(tij[i]);
     free(tij); 
-    
 
     free(colors); free(coverage); free(summarized_LCP); free(summarized_SL); free(tijMaxFreq); 
     endClock = clock();
 
     cpu_time_used = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
 
-    fprintf(info_file, "BWSD construction time: %lf seconds\n\n", cpu_time_used);
+    printf("BWSD computation time: %lf seconds\n", cpu_time_used);
 
-    fprintf(info_file, "\n");
+    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpu_time_used);
+    fclose(infoFile);
 
-    fclose(info_file);
+    return;
+}
+
+void printBWSDALLDebug(FILE* infoFile, char* path, int samples, size_t* tijMaxFreq,size_t** tij){
+    size_t i, j, z;
+    fprintf(infoFile, "BWSD computation info of genomes from %s merge:\n\n", path);    
+    for(i = 0; i < samples-1; i++){
+        for(j = i+1; j < samples; j++){
+            int row = (((j-1)*(j))/2)+i;
+            fprintf(infoFile, "t_{%ld,%ld}\n", i,j);
+            for(z = 1; z < tijMaxFreq[row]+1; z++){
+                if(tij[row][z] != 0){
+                    fprintf(infoFile, "t_%ld = %ld\n", z, tij[row][z]);
+                }
+            }
+            fprintf(infoFile, "\n");
+        }
+    }
+    fprintf(infoFile, "\n");
 }

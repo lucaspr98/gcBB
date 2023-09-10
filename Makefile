@@ -1,18 +1,22 @@
 CC = gcc
-CFLAGS = -O3 -Wall -Wno-char-subscripts -Wno-unused-function -c -std=gnu99 
-OBJFILES = main.o boss.o bwsd.o lib/rankbv.o
+CFLAGS = -O -Wall -Wno-char-subscripts -Wno-unused-function -c -std=gnu99 
+OBJFILES = main.o  external.o boss.o bwsd.o lib/rankbv.o
 TARGET = gcBB
 
 COVERAGE = 0
-BWSD_ALL = 1
+ALL_VS_ALL = 0
+DEBUG = 0
 
-DEFINES = -DCOVERAGE=$(COVERAGE) -DBWSD_ALL=$(BWSD_ALL)
+DEFINES = -DCOVERAGE=$(COVERAGE) -DALL_VS_ALL=$(ALL_VS_ALL) -DDEBUG=$(DEBUG)
 
 all: $(TARGET)
 	make -C egap/ && make -C utils/
 
 $(TARGET): $(OBJFILES) 
 	$(CC) -o $(TARGET) $(OBJFILES) -ldl -lm 
+
+external.o: external.c external.h
+	$(CC) $(CFLAGS) $(DEFINES) external.c -o external.o
 
 boss.o: boss.c boss.h
 	$(CC) $(CFLAGS) $(DEFINES) boss.c -o boss.o
