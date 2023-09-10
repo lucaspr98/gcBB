@@ -50,70 +50,70 @@ double bwsdShannonEntropy(size_t *t, size_t s, size_t n){
     return value;
 }
 
-void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos){
+void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rlFreq, size_t *pos){
     while(zeroCoverage > 0 && oneCoverage > 0){
-        rl_freq[(*pos)++] = 1;
-        rl_freq[(*pos)++] = 1;
+        rlFreq[(*pos)++] = 1;
+        rlFreq[(*pos)++] = 1;
         zeroCoverage--;
         oneCoverage--;
     }
     int last = zeroCoverage == 0 ? 1 : 0;
     if(last == 1 && oneCoverage){
-        rl_freq[(*pos)++] = 0;
-        rl_freq[(*pos)++] = oneCoverage;
+        rlFreq[(*pos)++] = 0;
+        rlFreq[(*pos)++] = oneCoverage;
     } else if(zeroCoverage) {
-        rl_freq[(*pos)++] = zeroCoverage;
-        rl_freq[(*pos)++] = 0;
+        rlFreq[(*pos)++] = zeroCoverage;
+        rlFreq[(*pos)++] = 0;
     }
     return;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage, int consider1, int consider2){
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t totalCoverage, int consider1, int consider2){
     size_t i;
     #if COVERAGE
-        size_t size = total_coverage+1;
+        size_t size = totalCoverage+1;
     #else
        size_t size = n+1;
     #endif
 
     // Count computation time
     clock_t start, end;
-    double cpu_time_used;
+    double cpuTimeUsed;
 
     start = clock();
 
     short *colors = (short*)calloc((mem+1), sizeof(short));
-    short *summarized_LCP = (short*)calloc((mem+1), sizeof(short));
-    short *summarized_SL = (short*)calloc((mem+1), sizeof(short));
+    short *summarizedLCP = (short*)calloc((mem+1), sizeof(short));
+    short *summarizedSL = (short*)calloc((mem+1), sizeof(short));
     int *coverage = (int*)calloc((mem+1), sizeof(int));
 
-    char color_file_name[FILE_PATH];
-    char summarized_LCP_file_name[FILE_PATH];
-    char summarized_SL_file_name[FILE_PATH];
-    char coverage_file_name[FILE_PATH];
+    char colorFileName[FILE_PATH];
+    char summarizedLCPFileName[FILE_PATH];
+    char summarizedSLFileName[FILE_PATH];
+    char coverageFileName[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-    sprintf(summarized_LCP_file_name, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
-    sprintf(summarized_SL_file_name, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
-    sprintf(coverage_file_name, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+    sprintf(colorFileName, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+    sprintf(summarizedLCPFileName, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
+    sprintf(summarizedSLFileName, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
+    sprintf(coverageFileName, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
     
-    FILE *colors_file = fopen(color_file_name, "rb");
-    FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
-    FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
-    FILE *coverage_file = fopen(coverage_file_name, "rb");
+    FILE *colorsFile = fopen(colorFileName, "rb");
+    FILE *summarizedLCPFile = fopen(summarizedLCPFileName, "rb");
+    FILE *summarizedSLFile = fopen(summarizedSLFileName, "rb");
+    FILE *coverageFile = fopen(coverageFileName, "rb");
 
-    fread(colors, sizeof(short), mem, colors_file);
-    fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
-    fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
-    fread(coverage, sizeof(int), mem, coverage_file);
+    fread(colors, sizeof(short), mem, colorsFile);
+    fread(summarizedLCP, sizeof(short), mem, summarizedLCPFile);
+    fread(summarizedSL, sizeof(short), mem, summarizedSLFile);
+    fread(coverage, sizeof(int), mem, coverageFile);
 
-    size_t *rl_freq = (size_t*)calloc(size, sizeof(size_t));
-    size_t max_freq = 0;
+    size_t *rlFreq = (size_t*)calloc(size, sizeof(size_t));
+    size_t maxFreq = 0;
 
     int current = consider1;
-    rl_freq[consider1] = consider1;
+    rlFreq[consider1] = consider1;
     size_t pos = 0; // size of run_length
-    int block_pos = 0;
+    int blockPos = 0;
     size_t rmq = 0;
     #if COVERAGE
     size_t consider1LastColorValue = consider1;
@@ -121,24 +121,24 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     #endif
 
     for(i = 0; i < n; i++){     
-        if(i != 0 && block_pos%mem == 0){
-            fread(colors, sizeof(short), mem, colors_file);
+        if(i != 0 && blockPos%mem == 0){
+            fread(colors, sizeof(short), mem, colorsFile);
 
-            fread(summarized_LCP, sizeof(short), mem, summarized_LCP_file);
+            fread(summarizedLCP, sizeof(short), mem, summarizedLCPFile);
 
-            fread(summarized_SL, sizeof(short), mem, summarized_SL_file);
+            fread(summarizedSL, sizeof(short), mem, summarizedSLFile);
 
-            fread(coverage, sizeof(int), mem, coverage_file);
+            fread(coverage, sizeof(int), mem, coverageFile);
 
-            block_pos=0;
+            blockPos=0;
         }
 
-        if(colors[block_pos] != consider1 && colors[block_pos] != consider2) {
-            rmq = MIN(rmq, summarized_LCP[block_pos]);
-            block_pos++;
+        if(colors[blockPos] != consider1 && colors[blockPos] != consider2) {
+            rmq = MIN(rmq, summarizedLCP[blockPos]);
+            blockPos++;
             continue;
         } else {
-            rmq = summarized_LCP[block_pos];
+            rmq = summarizedLCP[blockPos];
         }
 
         #if COVERAGE 
@@ -154,108 +154,108 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
         // order to "separate" the intermix from the "default" bwsd.
         // For example, 
         // ... 0^4 1^3 ... = ... 1^0 (0^1 1^1 0^1 1^1 0^1 1^1 0^1) 1^0 ...
-        if(consider1LastColorValue == consider1 && colors[block_pos] == consider2 && rmq > k && (consider1LastCoverageValue > 1 || coverage[block_pos] > 1)){
-            rl_freq[pos] = MAX((int)(rl_freq[pos])-1, 0); // decrease last 0 rl_freq because it is going to be intermixed with the current color
+        if(consider1LastColorValue == consider1 && colors[blockPos] == consider2 && rmq > k && (consider1LastCoverageValue > 1 || coverage[blockPos] > 1)){
+            rlFreq[pos] = MAX((int)(rlFreq[pos])-1, 0); // decrease last 0 rlFreq because it is going to be intermixed with the current color
             pos++;
-            rl_freq[pos++] = 0; // add 1^0 to rl_freq, since we are entering an intermix area and the last position is from genome 0
-            applyCoverageMerge(consider1LastCoverageValue, coverage[block_pos], rl_freq, &pos);
+            rlFreq[pos++] = 0; // add 1^0 to rlFreq, since we are entering an intermix area and the last position is from genome 0
+            applyCoverageMerge(consider1LastCoverageValue, coverage[blockPos], rlFreq, &pos);
             // set current to 0 to "restart" the bwsd 0s and 1s count
             current = 0;
         } else { 
         #endif
-            if(summarized_SL[block_pos] > k){
-                if(colors[block_pos] == current){
-                    rl_freq[pos]++;
+            if(summarizedSL[blockPos] > k){
+                if(colors[blockPos] == current){
+                    rlFreq[pos]++;
                 } else {
-                    current = colors[block_pos];
+                    current = colors[blockPos];
                     pos++;
-                    rl_freq[pos]=1;
+                    rlFreq[pos]=1;
                 }
                 #if COVERAGE
-                consider1LastColorValue = colors[block_pos];
-                consider1LastCoverageValue = coverage[block_pos];
+                consider1LastColorValue = colors[blockPos];
+                consider1LastCoverageValue = coverage[blockPos];
                 #endif
             }
         #if COVERAGE
         }
         #endif
-        block_pos++;
+        blockPos++;
     }
     pos++;
 
-    // check if sum rl_freq = n;
-    // update max_freq;
+    // check if sum rlFreq = n;
+    // update maxFreq;
     for(i = 0; i < pos; i++){
-        max_freq = MAX(rl_freq[i], max_freq);
+        maxFreq = MAX(rlFreq[i], maxFreq);
     }
 
     size_t s = pos;
 
     // update s removing 0's
     for(i = 0; i < pos; i++){
-        if(rl_freq[i] == 0) s--;
+        if(rlFreq[i] == 0) s--;
     }
 
-    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
+    free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
 
-    // computes every t_(k_j), where 1 <= j <= max_freq
-    size_t *t = (size_t*) calloc((max_freq+10), sizeof(size_t));
-    short *genome0 = (short*) calloc((max_freq+10), sizeof(short));
-    short *genome1 = (short*) calloc((max_freq+10), sizeof(short));
+    // computes every t_(k_j), where 1 <= j <= maxFreq
+    size_t *t = (size_t*) calloc((maxFreq+10), sizeof(size_t));
+    short *genome0 = (short*) calloc((maxFreq+10), sizeof(short));
+    short *genome1 = (short*) calloc((maxFreq+10), sizeof(short));
     for(i = 0; i < pos; i++){
-        if(rl_freq[i] > 0){
-            t[rl_freq[i]]++;
+        if(rlFreq[i] > 0){
+            t[rlFreq[i]]++;
             if(i%2)
-                genome0[rl_freq[i]] = 1;
+                genome0[rlFreq[i]] = 1;
             else 
-                genome1[rl_freq[i]] = 1;
+                genome1[rlFreq[i]] = 1;
         } 
     }
 
-    *expectation = bwsdExpectation(t, s, max_freq);
-    *entropy = bwsdShannonEntropy(t, s, max_freq);
+    *expectation = bwsdExpectation(t, s, maxFreq);
+    *entropy = bwsdShannonEntropy(t, s, maxFreq);
 
-    fclose(colors_file);
-    fclose(summarized_LCP_file);
-    fclose(summarized_SL_file);
-    fclose(coverage_file);
+    fclose(colorsFile);
+    fclose(summarizedLCPFile);
+    fclose(summarizedSLFile);
+    fclose(coverageFile);
     
     if(!printBoss){
-        remove(color_file_name);
-        remove(summarized_LCP_file_name);
-        remove(summarized_SL_file_name);
-        remove(coverage_file_name);
+        remove(colorFileName);
+        remove(summarizedLCPFileName);
+        remove(summarizedSLFileName);
+        remove(coverageFileName);
     }
 
     FILE* infoFile = getInfoFile(file1, file2, k, 1);
 
     #if DEBUG
-    printBWSDDebug(infoFile, file1, file2, total_coverage, n, pos, s, max_freq, t, genome0, genome1);
+    printBWSDDebug(infoFile, file1, file2, totalCoverage, n, pos, s, maxFreq, t, genome0, genome1);
     #endif
 
-    free(rl_freq); 
+    free(rlFreq); 
     free(genome0); free(genome1);
     free(t);
 
     end = clock();
 
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    cpuTimeUsed = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-    printf("BWSD computation time: %lf seconds\n", cpu_time_used);
+    printf("BWSD computation time: %lf seconds\n", cpuTimeUsed);
 
-    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpu_time_used);
+    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpuTimeUsed);
 
     fclose(infoFile);
 
     return;
 }
 
-void printBWSDDebug(FILE* infoFile, char* file1, char* file2, size_t total_coverage, size_t n, size_t pos, size_t s, size_t max_freq, size_t* t, short* genome0, short* genome1){
+void printBWSDDebug(FILE* infoFile, char* file1, char* file2, size_t totalCoverage, size_t n, size_t pos, size_t s, size_t maxFreq, size_t* t, short* genome0, short* genome1){
     size_t i;
 
     fprintf(infoFile, "BWSD info of %s and %s genomes merge:\n\n", file1, file2);
     #if COVERAGE
-        fprintf(infoFile, "total_coverage = %ld\n", total_coverage);
+        fprintf(infoFile, "totalCoverage = %ld\n", totalCoverage);
     #else
         fprintf(infoFile, "n = %ld\n", n);
     #endif
@@ -265,7 +265,7 @@ void printBWSDDebug(FILE* infoFile, char* file1, char* file2, size_t total_cover
 
     fprintf(infoFile, "terms: \n");
 
-    for(i = 0; i < max_freq+1; i++){
+    for(i = 0; i < maxFreq+1; i++){
         if(t[i] != 0){
             fprintf(infoFile, "t_%ld = %ld (", i, t[i]);
             if(genome0[i])
@@ -293,34 +293,34 @@ int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int interval
 }
 
 
-void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int mem, double** Dm, double** De){
+void bwsdAll(char* path, int samples, size_t n, size_t *sampleSize, int k, int mem, double** Dm, double** De){
     size_t i, j, z;
 
     // Count computation time
     clock_t startClock, endClock;
-    double cpu_time_used;
+    double cpuTimeUsed;
 
     startClock = clock();
 
     short *colors = (short*)calloc((mem+1), sizeof(short));
-    short *summarized_LCP = (short*)calloc((mem+1), sizeof(short));
-    short *summarized_SL = (short*)calloc((mem+1), sizeof(short));
+    short *summarizedLCP = (short*)calloc((mem+1), sizeof(short));
+    short *summarizedSL = (short*)calloc((mem+1), sizeof(short));
     int *coverage = (int*)calloc((mem+1), sizeof(int));
 
-    char color_file_name[FILE_PATH];
-    char summarized_LCP_file_name[FILE_PATH];
-    char summarized_SL_file_name[FILE_PATH];
-    char coverage_file_name[FILE_PATH];
+    char colorFileName[FILE_PATH];
+    char summarizedLCPFileName[FILE_PATH];
+    char summarizedSLFileName[FILE_PATH];
+    char coverageFileName[FILE_PATH];
 
-    sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
-    sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
-    sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
-    sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
+    sprintf(colorFileName, "results/%s_k_%d.2.colors", path, k);
+    sprintf(summarizedLCPFileName, "results/%s_k_%d.2.summarizedLCP", path, k);
+    sprintf(summarizedSLFileName, "results/%s_k_%d.2.summarizedSL", path, k);
+    sprintf(coverageFileName, "results/%s_k_%d.4.coverage", path, k);
     
-    FILE *colors_file = fopen(color_file_name, "rb");
-    FILE *summarized_LCP_file = fopen(summarized_LCP_file_name, "rb");
-    FILE *summarized_SL_file = fopen(summarized_SL_file_name, "rb");
-    FILE *coverage_file = fopen(coverage_file_name, "rb");
+    FILE *colorsFile = fopen(colorFileName, "rb");
+    FILE *summarizedLCPFile = fopen(summarizedLCPFileName, "rb");
+    FILE *summarizedSLFile = fopen(summarizedSLFileName, "rb");
+    FILE *coverageFile = fopen(coverageFileName, "rb");
 
     int tijSize = ((samples*(samples-1))/2)+1;
 
@@ -331,7 +331,7 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int 
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
-            tij[row] = (size_t*) calloc(MAX(sample_size[i],sample_size[j])+2, sizeof(size_t));
+            tij[row] = (size_t*) calloc(MAX(sampleSize[i],sampleSize[j])+2, sizeof(size_t));
         }
     } 
     size_t *tijMaxFreq = calloc(tijSize, sizeof(size_t));
@@ -344,10 +344,10 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int 
     while(blocks){
         // last block
         int readSize = blocks == 1 && mem != n ? n%mem : mem; 
-        fread(colors, sizeof(short), readSize, colors_file);
-        fread(summarized_LCP, sizeof(short), readSize, summarized_LCP_file);
-        fread(summarized_SL, sizeof(short), readSize, summarized_SL_file);
-        fread(coverage, sizeof(int), readSize, coverage_file);
+        fread(colors, sizeof(short), readSize, colorsFile);
+        fread(summarizedLCP, sizeof(short), readSize, summarizedLCPFile);
+        fread(summarizedSL, sizeof(short), readSize, summarizedSLFile);
+        fread(coverage, sizeof(int), readSize, coverageFile);
 
         rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
         for(i = 0; i < samples; i++){
@@ -355,7 +355,7 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int 
         }
 
         for(i = 0; i < readSize; i++){
-            if(summarized_SL[i] > k) rankbv_setbit(rbv[colors[i]], i);
+            if(summarizedSL[i] > k) rankbv_setbit(rbv[colors[i]], i);
         }
 
         for(i = 0; i < samples; i++)
@@ -372,7 +372,7 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int 
                 if(intervalEnd == -1) intervalEnd = readSize;
                  int lcpPos = -1;
                 if(needsToFindLcpNextBlock){
-                    lcpPos = getLastLCPGreaterThanKPos(summarized_LCP, k, intervalStart, intervalEnd);
+                    lcpPos = getLastLCPGreaterThanKPos(summarizedLCP, k, intervalStart, intervalEnd);
                     if(lcpPos < intervalEnd && intervalEnd == readSize && rankbv_access(rbv[i], intervalEnd) == 1)
                         needsToFindLcpNextBlock = 0;
                 }
@@ -474,14 +474,14 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sample_size, int k, int 
         free(tij[i]);
     free(tij); 
 
-    free(colors); free(coverage); free(summarized_LCP); free(summarized_SL); free(tijMaxFreq); 
+    free(colors); free(coverage); free(summarizedLCP); free(summarizedSL); free(tijMaxFreq); 
     endClock = clock();
 
-    cpu_time_used = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
+    cpuTimeUsed = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
 
-    printf("BWSD computation time: %lf seconds\n", cpu_time_used);
+    printf("BWSD computation time: %lf seconds\n", cpuTimeUsed);
 
-    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpu_time_used);
+    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpuTimeUsed);
     fclose(infoFile);
 
     return;

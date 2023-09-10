@@ -26,9 +26,9 @@
 #endif
 
 int compareFiles(const void *element1, const void *element2) {
-    const char **file_1 = (const char **)element1;
-    const char **file_2 = (const char **)element2;
-    return strcmp(*file_1, *file_2);
+    const char **file1 = (const char **)element1;
+    const char **file2 = (const char **)element2;
+    return strcmp(*file1, *file2);
 }
 
 char* getPathDirName(char *path, int len){
@@ -58,27 +58,27 @@ int main(int argc, char *argv[]){
     int i, j;
     char **files = (char**)calloc(16, 64*sizeof(char*));
     int k = 32;
-    int files_n = 0;
+    int numberOfFiles = 0;
     char *path;
-    int path_len;
+    int pathLen;
     int opt;
     int memory = 2048;
     int printBoss = 0;
 
     /******** Check arguments ********/
-    int valid_opts = 0;
+    int validOpts = 0;
     while ((opt = getopt (argc, argv, "pk:m:")) != -1){
         switch (opt){
             case 'p':
-                valid_opts+=1;
+                validOpts+=1;
                 printBoss = 1;
                 break;
             case 'k':
-                valid_opts += 2;
+                validOpts += 2;
                 k = atoi(optarg);
                 break;
             case 'm':
-                valid_opts += 2;
+                validOpts += 2;
                 memory = atoi(optarg);
                 break;
             case '?':
@@ -96,12 +96,12 @@ int main(int argc, char *argv[]){
         }
     }
 
-    if(argc-valid_opts == 2){
+    if(argc-validOpts == 2){
         DIR *folder;
         struct dirent *entry;
         int len;
-        path_len = strlen(argv[argc-1]);
-        path = (char*)malloc((path_len+1)*sizeof(char));
+        pathLen = strlen(argv[argc-1]);
+        path = (char*)malloc((pathLen+1)*sizeof(char));
         strcpy(path, argv[argc-1]);
 
         folder = opendir(argv[argc-1]);
@@ -115,29 +115,29 @@ int main(int argc, char *argv[]){
 
             if((isFastq && strlen(isFastq) == 6) || (isFasta && strlen(isFasta) == 6)){
                 len = strlen(entry->d_name)+1;
-                files[files_n] = (char*)malloc((path_len+len+2)*sizeof(char));
+                files[numberOfFiles] = (char*)malloc((pathLen+len+2)*sizeof(char));
 
-                strcpy(files[files_n], entry->d_name);
-                files_n++;
+                strcpy(files[numberOfFiles], entry->d_name);
+                numberOfFiles++;
             }
         }
 
         closedir(folder);
-    } else if(argc-valid_opts == 4){
-        int file_len;
-        path_len = strlen(argv[argc-3]);
-        path = (char*)malloc((path_len+1)*sizeof(char));
+    } else if(argc-validOpts == 4){
+        int fileLen;
+        pathLen = strlen(argv[argc-3]);
+        path = (char*)malloc((pathLen+1)*sizeof(char));
         strcpy(path, argv[argc-3]);
 
-        file_len = strlen(argv[argc-2]);
-        files[0] = (char*)malloc((file_len+1)*sizeof(char));
+        fileLen = strlen(argv[argc-2]);
+        files[0] = (char*)malloc((fileLen+1)*sizeof(char));
         strcpy(files[0], argv[argc-2]);
 
-        file_len = strlen(argv[argc-1]);
-        files[1] = (char*)malloc((file_len+1)*sizeof(char));
+        fileLen = strlen(argv[argc-1]);
+        files[1] = (char*)malloc((fileLen+1)*sizeof(char));
         strcpy(files[1], argv[argc-1]);
         
-        files_n = 2;
+        numberOfFiles = 2;
     } else {
         printf("Missing arguments!\n\n");
         printf("To compute distance of all fastq files from a directory use command:\n");
@@ -150,36 +150,36 @@ int main(int argc, char *argv[]){
     system("mkdir tmp");
     system("mkdir results");
 
-    qsort(files, files_n, sizeof(char*), compareFiles);
+    qsort(files, numberOfFiles, sizeof(char*), compareFiles);
 
     /******** Compute external needed files ********/
     printf("--- PHASE 1 ---\n");
     printf("Start computing SA, BWT and LCP for all files\n");
     // Computes SA, BWT, LCP and DA from both files
-    for(i = 0; i < files_n; i++){
+    for(i = 0; i < numberOfFiles; i++){
         computeFile(path, files[i], memory);
     }
 
     printf("All needed arrays computed!\n");
 
     // Remove file format from the string
-    for(i = 0; i < files_n; i++){
+    for(i = 0; i < numberOfFiles; i++){
         char *ptr;
         ptr = strchr(files[i], '.');
         if (ptr != NULL)
             *ptr = '\0';
     }
 
-    path = getPathDirName(path, path_len);
+    path = getPathDirName(path, pathLen);
 
     printf("Merging all pairs and computing document array (cda)\n");
 
     // Computes merge of files
     #if ALL_VS_ALL
-        computeMergeFileAll(path, files, files_n, memory);
+        computeMergeFileAll(path, files, numberOfFiles, memory);
     #else
-        for(i = 0; i < files_n; i++){
-            for(j = i+1; j < files_n; j++){
+        for(i = 0; i < numberOfFiles; i++){
+            for(j = i+1; j < numberOfFiles; j++){
                 computeMergeFiles(path, files[i], files[j], memory);
             }
         }
@@ -188,18 +188,18 @@ int main(int argc, char *argv[]){
     printf("All arrays merged\n");
 
     // Similarity matrix based on expectation
-    double **Dm = (double**)malloc(files_n*sizeof(double*));
-    for(i = 0; i < files_n; i++)
-        Dm[i] = (double*)malloc(files_n*sizeof(double));
+    double **Dm = (double**)malloc(numberOfFiles*sizeof(double*));
+    for(i = 0; i < numberOfFiles; i++)
+        Dm[i] = (double*)malloc(numberOfFiles*sizeof(double));
 
     // Similarity matrix based on shannons entropy
-    double **De = (double**)malloc(files_n*sizeof(double*));
-    for(i = 0; i < files_n; i++)
-        De[i] = (double*)malloc(files_n*sizeof(double));
+    double **De = (double**)malloc(numberOfFiles*sizeof(double*));
+    for(i = 0; i < numberOfFiles; i++)
+        De[i] = (double*)malloc(numberOfFiles*sizeof(double));
 
     // Initialize matrixes
-    for(i = 0; i < files_n; i++){
-        for(j = 0; j < files_n; j++){
+    for(i = 0; i < numberOfFiles; i++){
+        for(j = 0; j < numberOfFiles; j++){
             Dm[i][j] = 0.0;
             De[i][j] = 0.0;
         }
@@ -208,8 +208,8 @@ int main(int argc, char *argv[]){
     printf("Start construction of colored BOSS and comparing genomes using BWSD for every pair\n");
     
     #if !ALL_VS_ALL
-    for(i = 0; i < files_n; i++){
-        for(j = i+1; j < files_n; j++){
+    for(i = 0; i < numberOfFiles; i++){
+        for(j = i+1; j < numberOfFiles; j++){
             printf("--- PHASE 2 [%d,%d] ---\n", i, j);
     #else 
         printf("--- PHASE 2 ---\n");
@@ -244,16 +244,16 @@ int main(int argc, char *argv[]){
     #if !ALL_VS_ALL
         int samples = 2;
     #else
-        int samples = files_n;
+        int samples = numberOfFiles;
     #endif
 
     size_t *totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
     size_t *totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
 
     #if !ALL_VS_ALL
-        size_t boss_len = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
+        size_t bossLen = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
     #else
-        size_t boss_len = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, path, NULL, printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
+        size_t bossLen = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, path, NULL, printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
     #endif
 
     fclose(mergeBWT);
@@ -263,9 +263,9 @@ int main(int argc, char *argv[]){
     #if ALL_VS_ALL
         printf("--- PHASE 3 ---\n");
         #if COVERAGE
-            bwsdAll(path, files_n, boss_len, totalSampleCoverageInBoss, k, memory, Dm, De);
+            bwsdAll(path, numberOfFiles, bossLen, totalSampleCoverageInBoss, k, memory, Dm, De);
         #else 
-            bwsdAll(path, files_n, boss_len, totalSampleColorsInBoss, k, memory, Dm, De);
+            bwsdAll(path, numberOfFiles, bossLen, totalSampleColorsInBoss, k, memory, Dm, De);
         #endif
     #endif
 
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]){
         printf("--- PHASE 3 [%d,%d] ---\n", i, j);
         double expectation, entropy;
         expectation = entropy = 0.0;
-        bwsd(files[i], files[j], boss_len, k, &expectation, &entropy, memory, printBoss, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], 0, 1);            
+        bwsd(files[i], files[j], bossLen, k, &expectation, &entropy, memory, printBoss, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], 0, 1);            
         Dm[j][i] = expectation;
         De[j][i] = entropy;
     #endif
@@ -298,23 +298,23 @@ int main(int argc, char *argv[]){
 
     #if ALL_VS_ALL
     if(!printBoss){
-        char color_file_name[FILE_PATH];
-        char summarized_LCP_file_name[FILE_PATH];
-        char summarized_SL_file_name[FILE_PATH];
-        char coverage_file_name[FILE_PATH];
-        sprintf(color_file_name, "results/%s_k_%d.2.colors", path, k);
-        sprintf(summarized_LCP_file_name, "results/%s_k_%d.2.summarized_LCP", path, k);
-        sprintf(summarized_SL_file_name, "results/%s_k_%d.2.summarized_SL", path, k);
-        sprintf(coverage_file_name, "results/%s_k_%d.4.coverage", path, k);
-        remove(color_file_name);
-        remove(summarized_LCP_file_name);
-        remove(summarized_SL_file_name);
-        remove(coverage_file_name);
+        char colorFileName[FILE_PATH];
+        char summarizedLCPFileName[FILE_PATH];
+        char summarizedSLFileName[FILE_PATH];
+        char coverageFileName[FILE_PATH];
+        sprintf(colorFileName, "results/%s_k_%d.2.colors", path, k);
+        sprintf(summarizedLCPFileName, "results/%s_k_%d.2.summarizedLCP", path, k);
+        sprintf(summarizedSLFileName, "results/%s_k_%d.2.summarizedSL", path, k);
+        sprintf(coverageFileName, "results/%s_k_%d.4.coverage", path, k);
+        remove(colorFileName);
+        remove(summarizedLCPFileName);
+        remove(summarizedSLFileName);
+        remove(coverageFileName);
     }
     #endif
 
     // Print BWSD results in files .dmat and .nhx
-    printDistanceMatrixes(Dm, De, files, files_n, path, k);
+    printDistanceMatrixes(Dm, De, files, numberOfFiles, path, k);
 
     printf("All distance matrixes and newick files can be found in results folder\n");
 
@@ -322,10 +322,10 @@ int main(int argc, char *argv[]){
     for(i = 0; i < 32; i++) free(files[i]);
     free(files);
 
-    for(i = 0; i < files_n; i++) free(Dm[i]);
+    for(i = 0; i < numberOfFiles; i++) free(Dm[i]);
     free(Dm);
 
-    for(i = 0; i < files_n; i++) free(De[i]);
+    for(i = 0; i < numberOfFiles; i++) free(De[i]);
     free(De);
 
     free(path);
