@@ -26,22 +26,39 @@ To compile use the command:
 make all
 ```
 Options:
+* `ALL_VS_ALL=1` to make eGap compute and merge all genomes instead of pairwise, constructs BOSS for one merge and computes BWSD using a bitvector approach described in [[2](https://doi.org/10.1016/j.tcs.2019.03.012)]. The default value is ALL_VS_ALL=1.
 * `COVERAGE=1` to apply coverage to weight the comparison on BWSD. The default value is COVERAGE=0.
-* `ALL_VS_ALL=1` to make eGap compute and merge all genomes instead of pairwise, constructs BOSS for one merge and computes BWSD using a bitvector approach described in [[2](https://doi.org/10.1016/j.tcs.2019.03.012)]. The default value is ALL_VS_ALL=0.
 * `DEBUG=1` to print information over the BOSS construction and BWSD computation. The default value is DEBUG=0.
 
 
 Example:
 ```sh
-make all ALL_VS_ALL=1 COVERAGE=1 DEBUG=1
+make all COVERAGE=1 DEBUG=1
 ```
 **Obs**: use `make clean` command before `make all` with new options. 
 ## Run
 The code of gcBB provides the possibility of comparing a pair of genomes or all pairs of genomes in a collection. After running the algorithm a directory named `results/` will be created containing:
 * Two files containing the BWSD matrixes with the expectation and shannon's entropy between all pair of genomes;
 * Two files containing the newick files using expectation and shannon's entropy between all pair of genomes to reconstruct the phylogeny;
-* For each pair of genome, a file containing the BOSS and BWSD information. That is, _8*((N-1)*N/2)*_ files, where **N** is the number of genomes in the collection. (**ALL_VS_ALL=0**);
 * One file containing the BOSS and BWSD information for the entire collection (**ALL_VS_ALL=1**);
+* For each pair of genome, a file containing the BOSS and BWSD information. That is, _8*((N-1)*N/2)*_ files, where **N** is the number of genomes in the collection. (**ALL_VS_ALL=0**);
+
+### Genome collection comparison
+To construct the BOSS representation and compute the BWSD between all pair of genomes from a directory run gcBB using the command:
+```sh
+./gcBB <path_to_dir>
+```
+**Example:**
+```sh
+./gcBB dataset/ -k 3
+```
+Consider that `dataset/` contains the following genomes `reads1.fastq`, `reads2.fastq`, `reads3.fastq`.\
+In directory results, there will be the following files: 
+* `dataset_expectation_k_3.dmat` and  `dataset_entropy_k_3.dmat`;
+* `dataset_k_3_all.info` (**ALL_VS_ALL=1**).
+* `reads1-reads2_k_3.info`, `reads1-reads3_k_3.info`, `reads2-reads3_k_3.info` (**ALL_VS_ALL=0**);
+
+Note that if the `ALL_VS_ALL` flag was used in make, `all` will be in the suffix of the outputted files.
 
 ### Pair of genomes comparison
 To construct the BOSS representation and compute the BWSD between a pair of genomes run gcBB using the command:
@@ -58,24 +75,7 @@ In directory results, there will be the following files:
 
 If the COVERAGE flag was used in make, `cov` will be in the suffix of the outputted files.
 
-**Obs**: pair fo genomes comparison currently not work with `ALL_VS_ALL` compile option.
-
-### Genome collection comparison
-To construct the BOSS representation and compute the BWSD between all pair of genomes from a directory run gcBB using the command:
-```sh
-./gcBB <path_to_dir>
-```
-**Example:**
-```sh
-./gcBB dataset/ -k 3
-```
-Consider that `dataset/` contains the following genomes `reads1.fastq`, `reads2.fastq`, `reads3.fastq`.\
-In directory results, there will be the following files: 
-* `dataset_expectation_k_3.dmat` and  `dataset_entropy_k_3.dmat`;
-* `reads1-reads2_k_3.info`, `reads1-reads3_k_3.info`, `reads2-reads3_k_3.info` (**ALL_VS_ALL=0**);
-* `dataset_k_3_all.info` (**ALL_VS_ALL=1**).
-
-Note that if the `ALL_VS_ALL` flag was used in make, `all` will be in the suffix of the outputted files.
+**Obs**: pair fo genomes comparison currently not work with `ALL_VS_ALL=1` compile option.
 ### Command line options
 *-k*, specify the size of k-mers used in the BOSS construction. The default value is k=32.
 

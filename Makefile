@@ -4,7 +4,7 @@ OBJFILES = main.o  external.o boss.o bwsd.o lib/rankbv.o
 TARGET = gcBB
 
 COVERAGE = 0
-ALL_VS_ALL = 0
+ALL_VS_ALL = 1
 DEBUG = 0
 
 DEFINES = -DCOVERAGE=$(COVERAGE) -DALL_VS_ALL=$(ALL_VS_ALL) -DDEBUG=$(DEBUG)
