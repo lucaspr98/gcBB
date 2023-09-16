@@ -1,10 +1,12 @@
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t total_coverage, int consider1, int consider2);
+void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t totalCoverage, int consider1, int consider2);
 
-void apply_coverage_merge(int zeroCoverage, int oneCoverage, size_t *rl_freq, size_t *pos);
+void bwsdAll(char* path, int samples, size_t n, size_t *sampleSize, int k, int mem, double** Dm, double** De);
 
-double bwsd_expectation(size_t *t, size_t s, size_t n);
+void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rlFreq, size_t *pos);
 
-double bwsd_shannon_entropy(size_t *t, size_t s, size_t n);
+double bwsdExpectation(size_t *t, size_t s, size_t n);
+
+double bwsdShannonEntropy(size_t *t, size_t s, size_t n);
 
 double log2(double i);

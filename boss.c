@@ -3,83 +3,76 @@
 #include <string.h>
 #include <time.h>
 #include "boss.h"
+#include "external.h"
 
 #define FILE_PATH 1024
 #define ALPHABET_SIZE 255
 
-#ifndef COVERAGE
-	#define COVERAGE 0
-#endif
-
-#ifndef BOSS_ALL
-	#define BOSS_ALL 0
-#endif
-
 typedef struct {
     char W;
-    short Wm, color, summarized_LCP, summarized_SL;
+    short Wm, color, summarizedLCP, summarizedSL;
     int coverage;
-} kmer_range;
+} kmerRange;
 
 int compare(const void *element1, const void *element2) {
-    kmer_range *e1 = (kmer_range *)element1; 
-    kmer_range *e2 = (kmer_range *)element2;
+    kmerRange *e1 = (kmerRange *)element1; 
+    kmerRange *e2 = (kmerRange *)element2;
     if(e1->W == e2->W) 
         return e1->color - e2->color;
     return e1->W - e2->W;
 }
 
-void Wi_sort(char *Wi, short *Wm, short *colors, int *coverage, short *summarized_SL, int start, int end){
+void WiSort(char *Wi, short *Wm, short *colors, int *coverage, short *summarizedSL, int start, int end){
     int i;
 
-    kmer_range *values = (kmer_range*)malloc(end*sizeof(kmer_range));
+    kmerRange *values = (kmerRange*)malloc(end*sizeof(kmerRange));
     for(i = start; i < end; i++){
         values[i].W = Wi[i];
         values[i].Wm = Wm[i];
         values[i].color = colors[i];
         values[i].coverage = coverage[i];
-        values[i].summarized_SL = summarized_SL[i];
+        values[i].summarizedSL = summarizedSL[i];
     }
 
-    qsort(values, end, sizeof(kmer_range), compare);
+    qsort(values, end, sizeof(kmerRange), compare);
 
     for(i = start; i < end; i++){
         Wi[i] = values[i].W;
         Wm[i] = values[i].Wm;
         colors[i] = values[i].color;
         coverage[i] = values[i].coverage;
-        summarized_SL[i] = values[i].summarized_SL;
+        summarizedSL[i] = values[i].summarizedSL;
     }
     
     free(values);
 }
 
-void fix_Wi_LCP(char *W, short *summarized_LCP, int k, int Wi_size){
-    for(int i = 1; i < Wi_size; i++){
+void fixWiLCP(char *W, short *summarizedLCP, int k, int WiSize){
+    for(int i = 1; i < WiSize; i++){
         if(W[i-1] == W[i])
-            summarized_LCP[i] = k+1;
+            summarizedLCP[i] = k+1;
         else 
-            summarized_LCP[i] = k;
+            summarizedLCP[i] = k;
     }
 }
 
-void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short *summarized_SL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int Wi_size, int edge_status){
+void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *summarizedSL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int WiSize, int edgeStatus){
     *W = bwt;
     *colors = da;
-    *summarized_LCP = lcp;
-    *summarized_SL = sl;
-    if(edge_status == 0){
-        if(Wi_size == 0){
-            (*last)[Wi_size] = 1;
+    *summarizedLCP = lcp;
+    *summarizedSL = sl;
+    if(edgeStatus == 0){
+        if(WiSize == 0){
+            (*last)[WiSize] = 1;
         } else {
-            (*last)[Wi_size-1] = 0;
-            (*last)[Wi_size] = 1;
+            (*last)[WiSize-1] = 0;
+            (*last)[WiSize] = 1;
         }
-    } else if(edge_status == 1){
-        (*last)[Wi_size] = 1;
-    } else if(edge_status == 2){
-        (*last)[Wi_size-1] = 0;
-        (*last)[Wi_size] = 1;
+    } else if(edgeStatus == 1){
+        (*last)[WiSize] = 1;
+    } else if(edgeStatus == 2){
+        (*last)[WiSize-1] = 0;
+        (*last)[WiSize] = 1;
     }
 
     if(freq == 0){
@@ -87,17 +80,17 @@ void add_edge(char *W, short **last, short *colors, short *summarized_LCP, short
     }
 }
 
-size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *total_coverage){
+size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *totalSampleCoverageInBoss, size_t *totalSampleColorsInBoss){
     // Iterators
     size_t i = 0; // iterates through Wi
     int j = 0;
     size_t bi = 0; // iterates through BWT, LCP, SL and DA 
-    int lcp_block_pos = 0; // iterates through LCP memory blocks
-    int other_blocks_pos = 1; // iterates through BWT, SL and DA memory blocks
+    int lcpBlockPos = 0; // iterates through LCP memory blocks
+    int otherBlocksPos = 1; // iterates through BWT, SL and DA memory blocks
 
     // Count computation time
     clock_t start, end;
-    double cpu_time_used;
+    double cpuTimeUsed;
 
     start = clock();
 
@@ -114,42 +107,41 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     for(j = 1; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
 
     // BOSS result files
-    char boss_last[FILE_PATH];
-    char boss_w[FILE_PATH];
-    char boss_wm[FILE_PATH];
-    char boss_colors[FILE_PATH];
-    char boss_coverage[FILE_PATH];
-    char boss_summarized_LCP[FILE_PATH];
-    char boss_summarized_SL[FILE_PATH];
+    char bossLast[FILE_PATH];
+    char bossW[FILE_PATH];
+    char bossWm[FILE_PATH];
+    char bossColors[FILE_PATH];
+    char bossCoverage[FILE_PATH];
+    char bossSummarizedLCP[FILE_PATH];
+    char bossSummarizedSL[FILE_PATH];
 
-    #if BOSS_ALL
-        
-        sprintf(boss_last, "results/%s_k_%d.2.last", file1, k);
-        sprintf(boss_w, "results/%s_k_%d.1.W", file1, k);
-        sprintf(boss_wm, "results/%s_k_%d.2.Wm", file1, k);
-        sprintf(boss_colors, "results/%s_k_%d.2.colors", file1, k);
-        sprintf(boss_coverage, "results/%s_k_%d.4.coverage", file1, k);
-        sprintf(boss_summarized_LCP, "results/%s_k_%d.2.summarized_LCP", file1, k);
-        sprintf(boss_summarized_SL, "results/%s_k_%d.2.summarized_SL", file1, k);
+    #if ALL_VS_ALL
+        sprintf(bossLast, "results/%s_k_%d.2.last", file1, k);
+        sprintf(bossW, "results/%s_k_%d.1.W", file1, k);
+        sprintf(bossWm, "results/%s_k_%d.2.Wm", file1, k);
+        sprintf(bossColors, "results/%s_k_%d.2.colors", file1, k);
+        sprintf(bossCoverage, "results/%s_k_%d.4.coverage", file1, k);
+        sprintf(bossSummarizedLCP, "results/%s_k_%d.2.summarizedLCP", file1, k);
+        sprintf(bossSummarizedSL, "results/%s_k_%d.2.summarizedSL", file1, k);
     #else
-        sprintf(boss_last, "results/%s-%s_k_%d.2.last", file1, file2, k);
-        sprintf(boss_w, "results/%s-%s_k_%d.1.W", file1, file2, k);
-        sprintf(boss_wm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
-        sprintf(boss_colors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-        sprintf(boss_coverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
-        sprintf(boss_summarized_LCP, "results/%s-%s_k_%d.2.summarized_LCP", file1, file2, k);
-        sprintf(boss_summarized_SL, "results/%s-%s_k_%d.2.summarized_SL", file1, file2, k);
+        sprintf(bossLast, "results/%s-%s_k_%d.2.last", file1, file2, k);
+        sprintf(bossW, "results/%s-%s_k_%d.1.W", file1, file2, k);
+        sprintf(bossWm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
+        sprintf(bossColors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+        sprintf(bossCoverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+        sprintf(bossSummarizedLCP, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
+        sprintf(bossSummarizedSL, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
     #endif
     
 
-    FILE *boss_last_file = fopen(boss_last, "wb");
-    FILE *boss_w_file = fopen(boss_w, "wb");
-    FILE *boss_wm_file = fopen(boss_wm, "wb");
+    FILE *bossLastFile = fopen(bossLast, "wb");
+    FILE *bossWFile = fopen(bossW, "wb");
+    FILE *bossWm_file = fopen(bossWm, "wb");
     
-    FILE *boss_colors_file = fopen(boss_colors, "wb");
-    FILE *boss_coverage_file = fopen(boss_coverage, "wb");
-    FILE *boss_summarized_LCP_file = fopen(boss_summarized_LCP, "wb");
-    FILE *boss_summarized_SL_file = fopen(boss_summarized_SL, "wb");
+    FILE *bossColorsFile = fopen(bossColors, "wb");
+    FILE *bossCoverageFile = fopen(bossCoverage, "wb");
+    FILE *bossSummarizedLCPFile = fopen(bossSummarizedLCP, "wb");
+    FILE *bossSummarizedSLFile = fopen(bossSummarizedSL, "wb");
 
     // BOSS construction variables
     short *last = (short*)calloc(50, sizeof(short));
@@ -157,29 +149,29 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     short *Wm = (short*)calloc(50,sizeof(short));
     short *colors = (short*)calloc(50, sizeof(short));
     int *coverage = (int*)calloc(50, sizeof(int));
-    short *summarized_LCP = (short*)calloc(50, sizeof(short));
-    short *summarized_SL = (short*)calloc(50, sizeof(short));
+    short *summarizedLCP = (short*)calloc(50, sizeof(short));
+    short *summarizedSL = (short*)calloc(50, sizeof(short));
 
     for(j = 0; j < 50; j++) coverage[j] = 1;
 
     int C[ALPHABET_SIZE] = { 0 };
 
     // BOSS construction auxiliary variables 
-    int Wi_size = 0; 
-    int W_freq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
-    int Wi_freq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
-    int Wi_first_occurrence[samples][ALPHABET_SIZE]; // first occurence of an outgoing edge in a k-mer suffix range from a string collection
-    memset(Wi_first_occurrence, 0,  sizeof(int)*samples*ALPHABET_SIZE);
-    int DA_freq[samples][ALPHABET_SIZE]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
-    memset(DA_freq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
+    int WiSize = 0; 
+    int WFreq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a (k-1)-mer suffix range (detects W- = 1)
+    int WiFreq[ALPHABET_SIZE] = { 0 }; // frequency of outgoing edges in a k-mer suffix range (detects same outgoing edge in a vertex)
+    int WiFirstOccurrence[samples][ALPHABET_SIZE]; // first occurence of an outgoing edge in a k-mer suffix range from a string collection
+    memset(WiFirstOccurrence, 0,  sizeof(int)*samples*ALPHABET_SIZE);
+    int DAFreq[samples][ALPHABET_SIZE]; // frequency of outgoing edges in a k-mer from a string collection (used to include same outgoing edge from distinct collections in BOSS representation)
+    memset(DAFreq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
 
-    int dummies_freq[samples][ALPHABET_SIZE]; // frequency of outgoing edges from dummy inputs of size 1 ($)
-    memset(dummies_freq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
+    int dummiesFreq[samples][ALPHABET_SIZE]; // frequency of outgoing edges from dummy inputs of size 1 ($)
+    memset(dummiesFreq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
 
     while(bi < n){
 
         // read next block
-        if(bi != 0 && lcp_block_pos%mem == 0){
+        if(bi != 0 && lcpBlockPos%mem == 0){
             LCP[0] = LCP[mem];
             fread(LCP+1, sizeof(short), mem, mergeLCP);
 
@@ -194,106 +186,113 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             
             for(j = 2; j < mem+3; j++) BWT[j] = (BWT[j] == 0) ? '$' : BWT[j];
             
-            lcp_block_pos = 0;
-            other_blocks_pos = 1;
+            lcpBlockPos = 0;
+            otherBlocksPos = 1;
         }
 
         // more than one outgoing edge of vertex i
-        if(LCP[lcp_block_pos+1] >= k && bi != n-1 ){
+        if(LCP[lcpBlockPos+1] >= k && bi != n-1 ){
             // since there is more than one outgoing edge, we don't need to check if BWT = $ or there is already BWT[bi] in Wi range
-            // if(BWT[other_blocks_pos] != '$'){ //change BWT[other_blocks_pos] with a new last_BWT variable (?) removed for now
-                if(Wi_freq[BWT[other_blocks_pos]] == 0){
-                    // Add values to BOSS representation
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 0);
-
-                    Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]] = Wi_size;
-
-                    // Increment variables
-                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++;
-                    (*total_coverage)++;
+            if(WiFreq[BWT[otherBlocksPos]] == 0){
+                // Add values to BOSS representation
+                addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 0);
+                WiFirstOccurrence[DA[otherBlocksPos]][BWT[otherBlocksPos]] = WiSize;
+                // Increment variables
+                C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; WiFreq[BWT[otherBlocksPos]]++; DAFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]]++; WiSize++; i++;
+                (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
+            } else {
+                // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
+                if(DAFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]] == 0){
+                    addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 0);
+                    WiFirstOccurrence[DA[otherBlocksPos]][BWT[otherBlocksPos]] = WiSize;
+                    C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; WiFreq[BWT[otherBlocksPos]]++; DAFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]]++; WiSize++; i++; 
+                    (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                    (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
                 } else {
-                    // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0){
-                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 0);
-
-                        Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]] = Wi_size;
-
-                        C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++; 
-                        (*total_coverage)++;
-                    } else {
-                        // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] which is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]];
-                        coverage[existing_pos]++;
-                        (*total_coverage)++;
-                    }
+                    // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] which is already on BOSS construction 
+                    int existingPos = WiFirstOccurrence[DA[otherBlocksPos]][BWT[otherBlocksPos]];
+                    coverage[existingPos]++;
+                    (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
                 }
-            // }
+            }
         } else {
             // just one outgoing edge of vertex i
-            if(Wi_size == 0){
-                //fix SL[other_blocks_pos-1] memory leak
-                if (SL[other_blocks_pos] == 1 && dummies_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0) {
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 1);
+            if(WiSize == 0){
+                //fix SL[otherBlocksPos-1] memory leak
+                if (SL[otherBlocksPos] == 1 && dummiesFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]] == 0) {
+                    addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 1);
 
-                    dummies_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++;
+                    dummiesFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]]++;
 
-                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; i++; Wi_size++;(*total_coverage)++;
-                } else if(SL[other_blocks_pos] > 1 && !(LCP[lcp_block_pos] == SL[other_blocks_pos-1]-1 && BWT[other_blocks_pos] == BWT[other_blocks_pos-1] && DA[other_blocks_pos] == DA[other_blocks_pos-1])){
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 1);
-                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; i++; Wi_size++;(*total_coverage)++;
+                    C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; i++; WiSize++;
+                    
+                    (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                    (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
+                } else if(SL[otherBlocksPos] > 1 && !(LCP[lcpBlockPos] == SL[otherBlocksPos-1]-1 && BWT[otherBlocksPos] == BWT[otherBlocksPos-1] && DA[otherBlocksPos] == DA[otherBlocksPos-1])){
+                    addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 1);
+                    C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; i++; WiSize++;
+                    
+                    (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                    (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
                 } 
             } 
             // last outgoing edge of vertex i
             else {
                 // check if there is already outgoing edge labeled with BWT[bi] leaving vertex i
-                if(Wi_freq[BWT[other_blocks_pos]] == 0){
-                    add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 2);
+                if(WiFreq[BWT[otherBlocksPos]] == 0){
+                    addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 2);
 
-                    C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_size++; i++; 
-                    (*total_coverage)++;
+                    C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; WiSize++; i++; 
+                    
+                    (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                    (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
                 } else {
                     // check if there is already outgoing edge labeled with BWT[bi] from DA[bi] leaving vertex i
-                    if(DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]] == 0){
-                        add_edge(&W[Wi_size], &last, &colors[Wi_size], &summarized_LCP[Wi_size], &summarized_SL[Wi_size], W_freq[BWT[other_blocks_pos]], &Wm[Wi_size], BWT[other_blocks_pos], DA[other_blocks_pos], LCP[lcp_block_pos], SL[other_blocks_pos], Wi_size, 2);
+                    if(DAFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]] == 0){
+                        addEdge(&W[WiSize], &last, &colors[WiSize], &summarizedLCP[WiSize], &summarizedSL[WiSize], WFreq[BWT[otherBlocksPos]], &Wm[WiSize], BWT[otherBlocksPos], DA[otherBlocksPos], LCP[lcpBlockPos], SL[otherBlocksPos], WiSize, 2);
 
-                        C[BWT[other_blocks_pos]]++; W_freq[BWT[other_blocks_pos]]++; Wi_freq[BWT[other_blocks_pos]]++; DA_freq[DA[other_blocks_pos]][BWT[other_blocks_pos]]++; Wi_size++; i++;                   
-                        (*total_coverage)++;
+                        C[BWT[otherBlocksPos]]++; WFreq[BWT[otherBlocksPos]]++; WiFreq[BWT[otherBlocksPos]]++; DAFreq[DA[otherBlocksPos]][BWT[otherBlocksPos]]++; WiSize++; i++;                   
+                        
+                        (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
+                        (totalSampleColorsInBoss[DA[otherBlocksPos]])++;
                     } else {
                         // increases the coverage information of the node with outgoing edge labeled with BWT[bi] from DA[bi] which is already on BOSS construction 
-                        int existing_pos = Wi_first_occurrence[DA[other_blocks_pos]][BWT[other_blocks_pos]];
-                        coverage[existing_pos]++;
-                        (*total_coverage)++;
+                        int existingPos = WiFirstOccurrence[DA[otherBlocksPos]][BWT[otherBlocksPos]];
+                        coverage[existingPos]++;
+                        
+                        (totalSampleCoverageInBoss[DA[otherBlocksPos]])++;
                     }
                 }
                 // sort outgoing edges of vertex i in lexigraphic order 
-                if(Wi_size > 1){
-                    Wi_sort(W, Wm, colors, coverage, summarized_SL, 0, Wi_size);
-                    fix_Wi_LCP(W, summarized_LCP, k, Wi_size);
+                if(WiSize > 1){
+                    WiSort(W, Wm, colors, coverage, summarizedSL, 0, WiSize);
+                    fixWiLCP(W, summarizedLCP, k, WiSize);
                 }                
 
                 // clean frequency variables of outgoing edges in Wi 
-                memset(Wi_freq, 0, sizeof(int)*ALPHABET_SIZE);   
-                memset(DA_freq, 0, sizeof(int)*samples*ALPHABET_SIZE);
-                memset(dummies_freq, 0, sizeof(int)*samples*ALPHABET_SIZE);
-                memset(Wi_first_occurrence, 0, sizeof(int)*samples*ALPHABET_SIZE);
+                memset(WiFreq, 0, sizeof(int)*ALPHABET_SIZE);   
+                memset(DAFreq, 0, sizeof(int)*samples*ALPHABET_SIZE);
+                memset(dummiesFreq, 0, sizeof(int)*samples*ALPHABET_SIZE);
+                memset(WiFirstOccurrence, 0, sizeof(int)*samples*ALPHABET_SIZE);
             }
-            // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean W_freq values
-            if(LCP[lcp_block_pos+1] < k-1){
-                memset(W_freq, 0, sizeof(int)*ALPHABET_SIZE);
+            // if next LCP value is smaller than k-1 we have a new (k-1)-mer to keep track, so we clean WFreq values
+            if(LCP[lcpBlockPos+1] < k-1){
+                memset(WFreq, 0, sizeof(int)*ALPHABET_SIZE);
             }
 
             // Write Wi in BOSS results files
             if(printBoss){
-                fwrite(last, sizeof(short), Wi_size, boss_last_file);
-                fwrite(W, sizeof(char), Wi_size, boss_w_file);
-                fwrite(Wm, sizeof(short), Wi_size, boss_wm_file);
+                fwrite(last, sizeof(short), WiSize, bossLastFile);
+                fwrite(W, sizeof(char), WiSize, bossWFile);
+                fwrite(Wm, sizeof(short), WiSize, bossWm_file);
             }
 
             // needed for bwsd computation
-            fwrite(colors, sizeof(short), Wi_size, boss_colors_file);
-            fwrite(coverage, sizeof(int), Wi_size, boss_coverage_file);
-            fwrite(summarized_LCP, sizeof(short), Wi_size, boss_summarized_LCP_file);
-            fwrite(summarized_SL, sizeof(short), Wi_size, boss_summarized_SL_file);
+            fwrite(colors, sizeof(short), WiSize, bossColorsFile);
+            fwrite(coverage, sizeof(int), WiSize, bossCoverageFile);
+            fwrite(summarizedLCP, sizeof(short), WiSize, bossSummarizedLCPFile);
+            fwrite(summarizedSL, sizeof(short), WiSize, bossSummarizedSLFile);
 
             // clean buffers
             memset(last, 0, sizeof(short)*50);   
@@ -301,15 +300,15 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
             memset(Wm, 0, sizeof(short)*50);   
             memset(colors, 0, sizeof(short)*50);   
             memset(coverage, 0, sizeof(int)*50);   
-            memset(summarized_LCP, 0, sizeof(short)*50);   
-            memset(summarized_SL, 0, sizeof(short)*50);   
+            memset(summarizedLCP, 0, sizeof(short)*50);   
+            memset(summarizedSL, 0, sizeof(short)*50);   
 
             for(j = 0; j < 50; j++) coverage[j] = 1;
 
-            Wi_size = 0; 
+            WiSize = 0; 
         }
-        lcp_block_pos++;
-        other_blocks_pos++;
+        lcpBlockPos++;
+        otherBlocksPos++;
         bi++;
     }
 
@@ -320,81 +319,76 @@ size_t boss_construction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *me
     C[4] = C['G'] + C[3];
     C[5] = C['N'] + C[4];
     C[0] = 0;
-
-    end = clock();
-
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    // Print BOSS construction info
-    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
-    char info[FILE_PATH];
-
-    #if BOSS_ALL
-        sprintf(info, "results/%s", file1);
-    #else
-        sprintf(info, "results/%s-%s", file1, file2);   
-    #endif
-
-    #if COVERAGE
-        strcat(info, "_coverage");
-    #endif
-
-    #if BOSS_ALL
-        strcat(info, "_bossall");
-    #endif
-
-    char extension[FILE_PATH];
-    sprintf(extension, "_k_%d.info", k);
-    strcat(info, extension);
     
-    FILE *info_file = fopen(info, "w");
-
-    #if BOSS_ALL
-        fprintf(info_file, "Boss construction info of genoms from %s merge:\n\n", file1);
+    #if ALL_VS_ALL
+    FILE *infoFile = getInfoFile(file1, NULL, k, 0);
     #else
-        fprintf(info_file, "Boss construction info of %s and %s genomes merge:\n\n", file1, file2);   
-    #endif   
-   
+    FILE *infoFile = getInfoFile(file1, file2, k, 0);
+    #endif
 
-    fprintf(info_file, "Boss construction time: %lf seconds\n\n", cpu_time_used);
-
-    fprintf(info_file, "C array:\n");
-    for(j = 0; j < 6; j++)
-        fprintf(info_file, "%c %d\n", alphabet[j], C[j]);
-    fprintf(info_file, "\n");
-
-    fprintf(info_file, "Frequencies:\n");
-    for(j = 0; j < 6; j++)
-        fprintf(info_file, "%c %d\n", alphabet[j], C[alphabet[j]]);
-    fprintf(info_file, "\n");
-
-    fprintf(info_file, "Boss length: %ld\n\n", i);
-
-    fprintf(info_file, "Total coverage: %ld\n\n", (*total_coverage));
-
-    // Close used files
-    fclose(info_file);
+    #if DEBUG
+    char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
+        #if ALL_VS_ALL
+        printBOSSDebug(infoFile, file1, NULL, alphabet, C, totalSampleCoverageInBoss, samples);
+        #else
+        printBOSSDebug(infoFile, file1, file2, alphabet, C, totalSampleCoverageInBoss, samples);
+        #endif
+    #endif
     
     if(printBoss){
-        fclose(boss_last_file);
-        fclose(boss_w_file);
-        fclose(boss_wm_file);
+        fclose(bossLastFile);
+        fclose(bossWFile);
+        fclose(bossWm_file);
     } else {
-        remove(boss_last);
-        remove(boss_w);
-        remove(boss_wm);
+        remove(bossLast);
+        remove(bossW);
+        remove(bossWm);
     }
 
-    fclose(boss_colors_file);
-    fclose(boss_coverage_file);
-    fclose(boss_summarized_LCP_file);
-    fclose(boss_summarized_SL_file);
+    fclose(bossColorsFile);
+    fclose(bossCoverageFile);
+    fclose(bossSummarizedLCPFile);
+    fclose(bossSummarizedSLFile);
 
     // free BOSS construction needed variables
     free(LCP); free(BWT); free(DA); free(SL);
     
     // free BOSS construction variables
-    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarized_LCP); free(summarized_SL);
+    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
+
+    end = clock();
+
+    cpuTimeUsed = ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    printf("BOSS construction time: %lf seconds\n", cpuTimeUsed);
+
+    fprintf(infoFile, "BOSS construction time: %lf seconds\n", cpuTimeUsed);
+    fclose(infoFile);
 
     return i;
 };
+
+void printBOSSDebug(FILE* infoFile, char* file1, char* file2, char* alphabet, int* C, size_t* totalSampleCoverageInBoss, int samples){
+    size_t i,j;
+    #if ALL_VS_ALL
+        fprintf(infoFile, "BOSS construction info of genoms from %s merge:\n\n", file1);
+    #else
+        fprintf(infoFile, "BOSS construction info of %s and %s genomes merge:\n\n", file1, file2);   
+    #endif
+
+    fprintf(infoFile, "C array:\n");
+    for(j = 0; j < 6; j++)
+        fprintf(infoFile, "%c %d\n", alphabet[j], C[j]);
+    fprintf(infoFile, "\n");
+
+    fprintf(infoFile, "Frequencies:\n");
+    for(j = 0; j < 6; j++)
+        fprintf(infoFile, "%c %d\n", alphabet[j], C[alphabet[j]]);
+    fprintf(infoFile, "\n");
+
+    fprintf(infoFile, "BOSS length: %ld\n\n", i);
+
+    size_t totalCoverage = 0;
+    for(j = 0; j < samples; j++) totalCoverage += totalSampleCoverageInBoss[j];
+    fprintf(infoFile, "Total coverage: %ld\n\n", totalCoverage);
+}

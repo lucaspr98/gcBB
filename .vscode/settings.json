@@ -12,7 +12,12 @@
         "random": "c",
         "iosfwd": "cpp",
         "iostream": "cpp",
-        "libgen.h": "c"
+        "libgen.h": "c",
+        "rankbv.h": "c",
+        "deque": "c",
+        "string": "c",
+        "unordered_map": "c",
+        "vector": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
