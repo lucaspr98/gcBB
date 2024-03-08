@@ -134,11 +134,11 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     #endif
     
 
-    if(printBoss){
-        FILE *bossLastFile = fopen(bossLast, "wb");
-        FILE *bossWFile = fopen(bossW, "wb");
-        FILE *bossWm_file = fopen(bossWm, "wb");
-    }
+    
+    FILE *bossLastFile = fopen(bossLast, "wb");
+    FILE *bossWFile = fopen(bossW, "wb");
+    FILE *bossWm_file = fopen(bossWm, "wb");
+    
     
     FILE *bossColorsFile = fopen(bossColors, "wb");
     FILE *bossCoverageFile = fopen(bossCoverage, "wb");
