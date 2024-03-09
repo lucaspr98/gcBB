@@ -82,7 +82,7 @@ void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *
 
 size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *totalSampleCoverageInBoss, size_t *totalSampleColorsInBoss){
     // Iterators
-    size_t i = 0; // iterates through Wi
+    unsigned int i = 0; // iterates through Wi
     int j = 0;
     size_t bi = 0; // iterates through BWT, LCP, SL and DA 
     int lcpBlockPos = 0; // iterates through LCP memory blocks
@@ -156,7 +156,7 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
 
     for(j = 0; j < 50; j++) coverage[j] = 1;
 
-    int C[ALPHABET_SIZE] = { 0 };
+    unsigned int C[ALPHABET_SIZE] = { 0 };
 
     // BOSS construction auxiliary variables 
     int WiSize = 0; 
@@ -331,9 +331,9 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     #if DEBUG
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
         #if ALL_VS_ALL
-        printBOSSDebug(infoFile, file1, NULL, alphabet, C, totalSampleCoverageInBoss, samples);
+        printBOSSDebug(i, infoFile, file1, NULL, alphabet, C, totalSampleCoverageInBoss, samples);
         #else
-        printBOSSDebug(infoFile, file1, file2, alphabet, C, totalSampleCoverageInBoss, samples);
+        printBOSSDebug(i, infoFile, file1, file2, alphabet, C, totalSampleCoverageInBoss, samples);
         #endif
     #endif
     
@@ -370,10 +370,10 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     return i;
 };
 
-void printBOSSDebug(FILE* infoFile, char* file1, char* file2, char* alphabet, int* C, size_t* totalSampleCoverageInBoss, int samples){
-    size_t i,j;
+void printBOSSDebug(unsigned int bossLength, FILE* infoFile, char* file1, char* file2, char* alphabet, int* C, size_t* totalSampleCoverageInBoss, int samples){
+    size_t j;
     #if ALL_VS_ALL
-        fprintf(infoFile, "BOSS construction info of genoms from %s merge:\n\n", file1);
+        fprintf(infoFile, "BOSS construction info of genomes from %s merge:\n\n", file1);
     #else
         fprintf(infoFile, "BOSS construction info of %s and %s genomes merge:\n\n", file1, file2);   
     #endif
@@ -388,9 +388,9 @@ void printBOSSDebug(FILE* infoFile, char* file1, char* file2, char* alphabet, in
         fprintf(infoFile, "%c %d\n", alphabet[j], C[alphabet[j]]);
     fprintf(infoFile, "\n");
 
-    fprintf(infoFile, "BOSS length: %ld\n\n", i);
+    fprintf(infoFile, "BOSS length: %d\n\n", bossLength);
 
-    size_t totalCoverage = 0;
+    unsigned int totalCoverage = 0;
     for(j = 0; j < samples; j++) totalCoverage += totalSampleCoverageInBoss[j];
-    fprintf(infoFile, "Total coverage: %ld\n\n", totalCoverage);
+    fprintf(infoFile, "Total coverage: %d\n\n", totalCoverage);
 }
