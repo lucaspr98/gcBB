@@ -488,7 +488,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         }
 
         for(i = 0; i < samples; i++) rankbv_free(rbv[i]);
-        rankbv_free(rbv);
+        rankbv_free(*rbv);
 
         blocks--;
     }

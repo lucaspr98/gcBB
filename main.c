@@ -10,6 +10,7 @@
 #include "bwsd.h"
 #include "boss.h"
 #include "external.h"
+#include "lib/rankbv.h"
 
 #define FILE_PATH 1024
 

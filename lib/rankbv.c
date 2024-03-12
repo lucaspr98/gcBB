@@ -16,7 +16,7 @@ rankbv_length(rankbv_t* rbv)
 {
     return rbv->n;
 }
-inline uint32_t rankbv_bits(size_t n)
+uint32_t rankbv_bits(size_t n)
 {
     uint32_t b = 0;
     while (n) {
@@ -32,13 +32,13 @@ rankbv_popcount8(const uint32_t x)
     return __builtin_popcount(x&0xff);
 }
 
-inline size_t
+size_t
 rankbv_numsblocks(rankbv_t* rbv)
 {
     return rbv->n/rbv->s+1;
 }
 
-inline uint64_t*
+uint64_t*
 rankbv_getdata(rankbv_t* rbv)
 {
     size_t num_sblocks = rankbv_numsblocks(rbv);
@@ -46,7 +46,7 @@ rankbv_getdata(rankbv_t* rbv)
                        (sizeof(uint64_t)*num_sblocks));
 }
 
-inline int
+int
 rankbv_getbit(rankbv_t* rbv,size_t i)
 {
     size_t bs = i/rbv->s;
