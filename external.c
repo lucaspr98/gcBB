@@ -194,6 +194,8 @@ FILE* getInfoFile(char* file1, char* file2, int k, int update){
     strcat(info, "_all");
     #endif
 
+    strcat(info, ".info");
+
     if(update){
         return fopen(info, "a+");
     } else

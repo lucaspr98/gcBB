@@ -134,12 +134,14 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     #endif
 
 
-    FILE *bossColorsFileExists = fopen(bossColors, "r");
-    if(bossColorsFileExists){
-        printf("BOSS needed files already computed\n");
-        fclose(bossColorsFileExists);
-        return 0;
-    }
+    #if ALL_VS_ALL
+        FILE *bossColorsFileExists = fopen(bossColors, "r");
+        if(bossColorsFileExists){
+            printf("BOSS needed files already computed\n");
+            fclose(bossColorsFileExists);
+            return 0;
+        }
+    #endif
     
     FILE *bossLastFile = fopen(bossLast, "wb");
     FILE *bossWFile = fopen(bossW, "wb");
