@@ -14,7 +14,7 @@ all: $(TARGET)
 	make -C egap/ && make -C utils/
 
 $(TARGET): main.c $(OBJFILES) 
-	$(CC) $^ -o $(TARGET) -ldl -lm 
+	$(CC) $^ -o $(TARGET) $(DEFINES) -ldl -lm 
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $(DEFINES) -c $< -o $@
