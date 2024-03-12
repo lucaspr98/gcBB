@@ -13,6 +13,12 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+typedef struct {
+    unsigned long bossLen;
+    size_t *totalSampleColorsInBoss;
+    size_t *totalSampleCoverageInBoss;
+} bossInfo;
+
 double log2(double i){
 	return log(i)/log(2);
 }
@@ -293,7 +299,33 @@ int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int interval
 }
 
 
-void bwsdAll(char* path, int samples, size_t n, size_t *sampleSize, int k, int mem, double** Dm, double** De){
+bossInfo *getBossInfo(char* path, int samples, int k){
+    char info[FILE_PATH];
+    #if COVERAGE
+        sprintf(info, "results/%s_k_%d_cov_all.info", path, k);
+    #else
+        sprintf(info, "results/%s_k_%d_all.info", path, k);
+    #endif
+    
+
+    FILE *infoFile = fopen(info, "r");
+    bossInfo *bossInfo = calloc(1,sizeof(*bossInfo));
+    bossInfo->totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
+    bossInfo->totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
+
+    fscanf(infoFile, "%ld", &(bossInfo->bossLen));
+    for(int i = 0; i < samples; i++){
+        fscanf(infoFile, "%ld", &(bossInfo->totalSampleColorsInBoss[i]));
+    }
+    for(int i = 0; i < samples; i++){
+        fscanf(infoFile, "%ld", &(bossInfo->totalSampleCoverageInBoss[i]));
+    }
+
+    return bossInfo;
+}
+
+
+void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_aux, int k, int mem, double** Dm, double** De){
     size_t i, j, z;
 
     // Count computation time
@@ -301,6 +333,15 @@ void bwsdAll(char* path, int samples, size_t n, size_t *sampleSize, int k, int m
     double cpuTimeUsed;
 
     startClock = clock();
+
+    bossInfo *info = getBossInfo(path, samples, k);
+    unsigned long n = info->bossLen;
+    #if COVERAGE
+        size_t *sampleSize = info->totalSampleCoverageInBoss;
+    #else
+        size_t *sampleSize = info->totalSampleColorsInBoss;
+    #endif
+    
 
     short *colors = (short*)calloc((mem+1), sizeof(short));
     short *summarizedLCP = (short*)calloc((mem+1), sizeof(short));
