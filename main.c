@@ -45,19 +45,20 @@ char* getPathDirName(char *path, int len){
             break;
         }
     }
-    char* dir = calloc(len, sizeof(char));
+    char* dir = calloc(len+1, sizeof(char));
     int j = 0;
     lastSlashPos = path[lastSlashPos] == '/' ? lastSlashPos + 1 : lastSlashPos;
-    for(i = lastSlashPos; i < len; i++){
+    for(i = lastSlashPos; i <= len; i++){
         dir[j] = path[i];
         j++;
     }
+    free(path);
     return dir;
 }
 
 int main(int argc, char *argv[]){
     int i, j;
-    char **files = (char**)calloc(16, 64*sizeof(char*));
+    char **files = (char**)calloc(512, sizeof(char*));
     int k = 32;
     int numberOfFiles = 0;
     char *path;
@@ -260,6 +261,7 @@ int main(int argc, char *argv[]){
     fclose(mergeBWT);
     fclose(mergeLCP);
     fclose(mergeDA);
+    fclose(mergeSL);
 
     #if ALL_VS_ALL
         printf("--- PHASE 3 ---\n");
@@ -320,7 +322,7 @@ int main(int argc, char *argv[]){
     printf("All distance matrixes and newick files can be found in results folder\n");
 
     // Free variables
-    for(i = 0; i < 32; i++) free(files[i]);
+    for(i = 0; i < 512; i++) free(files[i]);
     free(files);
 
     for(i = 0; i < numberOfFiles; i++) free(Dm[i]);

@@ -139,6 +139,7 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
         if(bossColorsFileExists){
             printf("BOSS needed files already computed\n");
             fclose(bossColorsFileExists);
+            free(LCP); free(BWT); free(DA); free(SL);
             return 0;
         }
     #endif
@@ -368,6 +369,9 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     fclose(bossCoverageFile);
     fclose(bossSummarizedLCPFile);
     fclose(bossSummarizedSLFile);
+    fclose(bossLastFile);
+    fclose(bossWFile);
+    fclose(bossWm_file);
 
     // free BOSS construction needed variables
     free(LCP); free(BWT); free(DA); free(SL);

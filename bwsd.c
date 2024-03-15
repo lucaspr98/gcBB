@@ -321,6 +321,8 @@ bossInfo *getBossInfo(char* path, int samples, int k){
         fscanf(infoFile, "%ld", &(bossInfo->totalSampleCoverageInBoss[i]));
     }
 
+    fclose(infoFile);
+
     return bossInfo;
 }
 
@@ -342,7 +344,6 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         size_t *sampleSize = info->totalSampleColorsInBoss;
     #endif
     
-
     short *colors = (short*)calloc((mem+1), sizeof(short));
     short *summarizedLCP = (short*)calloc((mem+1), sizeof(short));
     short *summarizedSL = (short*)calloc((mem+1), sizeof(short));
@@ -378,7 +379,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
     size_t *tijMaxFreq = calloc(tijSize, sizeof(size_t));
 
     size_t *iCoverage = calloc(samples, sizeof(size_t));
-    size_t *jCoverage = calloc(tijSize, sizeof(size_t));
+    size_t *jCoverage = calloc(tijSize+1, sizeof(size_t));
     int needsToFindLcpNextBlock = 1;
 
     size_t blocks = ((n-1)/mem)+1;
@@ -425,10 +426,12 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
                     // start of a next block with unfinished interval
                     if(rankbv_access(rbv[i],intervalStart) == 1) 
                         firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart)+1);
-                    else
+                    else 
                         firstRbvJ1occurrence = rankbv_select1(rbv[j], rankbv_rank1(rbv[j], intervalStart));
-                    if(lcpPos >= intervalStart && firstRbvJ1occurrence >= intervalStart && firstRbvJ1occurrence <= lcpPos){
+                    if(lcpPos >= intervalStart && firstRbvJ1occurrence >= intervalStart && firstRbvJ1occurrence <= lcpPos && firstRbvJ1occurrence != -1){
                         jCoverage[row] = coverage[firstRbvJ1occurrence];
+                    } else {
+                        jCoverage[row] = 0;
                     }
                     // workaround for first interval, fail example:
                     // B_0 = 0 1 ...
@@ -516,6 +519,16 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
     free(tij); 
 
     free(colors); free(coverage); free(summarizedLCP); free(summarizedSL); free(tijMaxFreq); 
+
+    free(info->totalSampleColorsInBoss);
+    free(info->totalSampleCoverageInBoss);
+    free(info);
+
+    fclose(colorsFile);
+    fclose(summarizedLCPFile);
+    fclose(summarizedSLFile);
+    fclose(coverageFile);
+
     endClock = clock();
 
     cpuTimeUsed = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;

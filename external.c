@@ -44,7 +44,7 @@ void computeFile(char *path, char *file, int memory){
 }
 
 void computeMergeFileAll(char *path, char **files, int numberOfFiles, int memory){
-    char output[strlen(path)+12];
+    char output[strlen(path)+17];
     sprintf(output, "tmp/merge.%s.bwt", path);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
