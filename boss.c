@@ -56,7 +56,7 @@ void fixWiLCP(char *W, short *summarizedLCP, int k, int WiSize){
     }
 }
 
-void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *summarizedSL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int WiSize, int edgeStatus){
+void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *summarizedSL, int freq, short *Wm, char bwt, char da, short lcp, short sl, int WiSize, int edgeStatus){
     *W = bwt;
     *colors = da;
     *summarizedLCP = lcp;
@@ -354,6 +354,21 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
         printBOSSDebug(i, infoFile, file1, file2, alphabet, C, totalSampleCoverageInBoss, samples);
         #endif
     #endif
+
+    end = clock();
+
+    cpuTimeUsed = ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    printf("BOSS construction time: %lf seconds\n", cpuTimeUsed);
+
+    fprintf(infoFile, "BOSS construction time: %lf seconds\n", cpuTimeUsed);
+    fclose(infoFile);
+
+    // free BOSS construction needed variables
+    free(LCP); free(BWT); free(DA); free(SL);
+    
+    // free BOSS construction variables
+    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
     
     if(printBoss){
         fclose(bossLastFile);
@@ -369,24 +384,6 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     fclose(bossCoverageFile);
     fclose(bossSummarizedLCPFile);
     fclose(bossSummarizedSLFile);
-    fclose(bossLastFile);
-    fclose(bossWFile);
-    fclose(bossWm_file);
-
-    // free BOSS construction needed variables
-    free(LCP); free(BWT); free(DA); free(SL);
-    
-    // free BOSS construction variables
-    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
-
-    end = clock();
-
-    cpuTimeUsed = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    printf("BOSS construction time: %lf seconds\n", cpuTimeUsed);
-
-    fprintf(infoFile, "BOSS construction time: %lf seconds\n", cpuTimeUsed);
-    fclose(infoFile);
 
     return i;
 };
