@@ -154,15 +154,15 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     FILE *bossSummarizedSLFile = fopen(bossSummarizedSL, "wb");
 
     // BOSS construction variables
-    short *last = (short*)calloc(50, sizeof(short));
-    char *W = (char*)calloc(50, sizeof(char));
-    short *Wm = (short*)calloc(50,sizeof(short));
-    short *colors = (short*)calloc(50, sizeof(short));
-    int *coverage = (int*)calloc(50, sizeof(int));
-    short *summarizedLCP = (short*)calloc(50, sizeof(short));
-    short *summarizedSL = (short*)calloc(50, sizeof(short));
+    short *last = (short*)calloc(200, sizeof(short));
+    char *W = (char*)calloc(200, sizeof(char));
+    short *Wm = (short*)calloc(200,sizeof(short));
+    short *colors = (short*)calloc(200, sizeof(short));
+    int *coverage = (int*)calloc(200, sizeof(int));
+    short *summarizedLCP = (short*)calloc(200, sizeof(short));
+    short *summarizedSL = (short*)calloc(200, sizeof(short));
 
-    for(j = 0; j < 50; j++) coverage[j] = 1;
+    for(j = 0; j < 200; j++) coverage[j] = 1;
 
     unsigned long C[ALPHABET_SIZE] = { 0 };
 
@@ -305,15 +305,15 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
             fwrite(summarizedSL, sizeof(short), WiSize, bossSummarizedSLFile);
 
             // clean buffers
-            memset(last, 0, sizeof(short)*50);   
-            memset(W, 0, sizeof(char)*50);   
-            memset(Wm, 0, sizeof(short)*50);   
-            memset(colors, 0, sizeof(short)*50);   
-            memset(coverage, 0, sizeof(int)*50);   
-            memset(summarizedLCP, 0, sizeof(short)*50);   
-            memset(summarizedSL, 0, sizeof(short)*50);   
+            memset(last, 0, sizeof(short)*200);   
+            memset(W, 0, sizeof(char)*200);   
+            memset(Wm, 0, sizeof(short)*200);   
+            memset(colors, 0, sizeof(short)*200);   
+            memset(coverage, 0, sizeof(int)*200);   
+            memset(summarizedLCP, 0, sizeof(short)*200);   
+            memset(summarizedSL, 0, sizeof(short)*200);   
 
-            for(j = 0; j < 50; j++) coverage[j] = 1;
+            for(j = 0; j < 200; j++) coverage[j] = 1;
 
             WiSize = 0; 
         }
@@ -365,10 +365,10 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     fclose(infoFile);
 
     // free BOSS construction needed variables
-    free(LCP); free(BWT); free(DA); free(SL);
+    // free(LCP); free(BWT); free(DA); free(SL);
     
     // free BOSS construction variables
-    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
+    // free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
     
     if(printBoss){
         fclose(bossLastFile);

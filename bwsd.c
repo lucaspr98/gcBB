@@ -398,8 +398,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         }
 
         for(i = 0; i < readSize; i++){
-            // TODO: discover why there are colors values smaller than 0 and greater than samples
-            if(summarizedSL[i] > k && colors[i] < samples && colors[i] >= 0) {
+            if(summarizedSL[i] > k) {
                 rankbv_setbit(rbv[colors[i]], i);
             }
         }    
