@@ -9,5 +9,5 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
    1: just one outgoing edge
    2: last outgoing edge from a set
  */
-void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *summarizedSL, int freq, short *Wm, char bwt, int da, short lcp, short sl, int WiSize, int edgeStatus);
+void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *summarizedSL, int freq, short *Wm, char bwt, char da, short lcp, short sl, int WiSize, int edgeStatus);
 

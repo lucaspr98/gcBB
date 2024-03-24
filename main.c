@@ -155,7 +155,7 @@ int main(int argc, char *argv[]){
     qsort(files, numberOfFiles, sizeof(char*), compareFiles);
 
     /******** Compute external needed files ********/
-    printf("--- PHASE 1 ---\n");
+    printf("=== PHASE 1 ===\n");
     printf("Start computing SA, BWT and LCP for all files\n");
     // Computes SA, BWT, LCP and DA from both files
     for(i = 0; i < numberOfFiles; i++){
@@ -212,9 +212,9 @@ int main(int argc, char *argv[]){
     #if !ALL_VS_ALL
     for(i = 0; i < numberOfFiles; i++){
         for(j = i+1; j < numberOfFiles; j++){
-            printf("--- PHASE 2 [%d,%d] ---\n", i, j);
+            printf("=== PHASE 2 [%d,%d] ===\n", i, j);
     #else 
-        printf("--- PHASE 2 ---\n");
+        printf("=== PHASE 2 ===\n");
     #endif
     char mergeBWTFile[FILE_PATH];
     char mergeLCPFile[FILE_PATH];
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]){
     fclose(mergeSL);
 
     #if ALL_VS_ALL
-        printf("--- PHASE 3 ---\n");
+        printf("=== PHASE 3 ===\n");
         #if COVERAGE
             bwsdAll(path, numberOfFiles, bossLen, totalSampleCoverageInBoss, k, memory, Dm, De);
         #else 
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]){
     #endif
 
     #if !ALL_VS_ALL
-        printf("--- PHASE 3 [%d,%d] ---\n", i, j);
+        printf("=== PHASE 3 [%d,%d] ===\n", i, j);
         double expectation, entropy;
         expectation = entropy = 0.0;
         bwsd(files[i], files[j], bossLen, k, &expectation, &entropy, memory, printBoss, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], 0, 1);            

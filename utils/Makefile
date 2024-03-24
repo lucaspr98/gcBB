@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Wno-char-subscripts -Wno-unused-function
+CFLAGS = -g -Wall -Wno-char-subscripts -Wno-unused-function -std=gnu11
 LIBS = -lm #-ldl 
 MCOBJ =
 USEMC = 0

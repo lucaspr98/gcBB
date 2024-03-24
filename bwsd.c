@@ -383,6 +383,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
     int needsToFindLcpNextBlock = 1;
 
     size_t blocks = ((n-1)/mem)+1;
+
     while(blocks){
         // last block
         int readSize = blocks == 1 && mem != n ? n%mem : mem; 
@@ -397,8 +398,11 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         }
 
         for(i = 0; i < readSize; i++){
-            if(summarizedSL[i] > k) rankbv_setbit(rbv[colors[i]], i);
-        }
+            // TODO: discover why there are colors values smaller than 0 and greater than samples
+            if(summarizedSL[i] > k && colors[i] < samples && colors[i] >= 0) {
+                rankbv_setbit(rbv[colors[i]], i);
+            }
+        }    
 
         for(i = 0; i < samples; i++)
             rankbv_build(rbv[i]);
@@ -496,8 +500,6 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         blocks--;
     }
 
-    free(lastJRank); free(lastIRank); free(iCoverage); free(jCoverage);
-
     for(i = 0; i < samples-1; i++){
         for(j = i+1; j < samples; j++){
             int row = (((j-1)*(j))/2)+i;
@@ -514,6 +516,17 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
     printBWSDALLDebug(infoFile, path, samples, tijMaxFreq, tij);
     #endif
 
+    endClock = clock();
+
+    cpuTimeUsed = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
+
+    printf("BWSD computation time: %lf seconds\n", cpuTimeUsed);
+
+    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpuTimeUsed);
+    fclose(infoFile);
+
+    free(lastJRank); free(lastIRank); free(iCoverage); free(jCoverage);
+
     for(i = 0; i < tijSize; i++)
         free(tij[i]);
     free(tij); 
@@ -529,14 +542,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
     fclose(summarizedSLFile);
     fclose(coverageFile);
 
-    endClock = clock();
-
-    cpuTimeUsed = ((double) (endClock - startClock)) / CLOCKS_PER_SEC;
-
-    printf("BWSD computation time: %lf seconds\n", cpuTimeUsed);
-
-    fprintf(infoFile, "BWSD computation time: %lf seconds\n", cpuTimeUsed);
-    fclose(infoFile);
+    
 
     return;
 }
