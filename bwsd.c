@@ -150,14 +150,6 @@ void bwsd(char* file1, char* file2, int k, double *expectation, double *entropy,
     size_t consider1LastCoverageValue = 0; 
     #endif
 
-
-    for(int z= 0; z< n; z++){
-        if(summarizedSL[z] > k)
-            printf("%d ", colors[z]);
-    }
-    printf("\n");
-
-
     for(i = 0; i < n; i++){     
         if(i != 0 && blockPos%mem == 0){
             fread(colors, sizeof(short), mem, colorsFile);
@@ -394,28 +386,6 @@ void bwsdAll(char* path, int samples, int k, int mem, double** Dm, double** De){
         fread(summarizedLCP, sizeof(short), readSize, summarizedLCPFile);
         fread(summarizedSL, sizeof(short), readSize, summarizedSLFile);
         fread(coverage, sizeof(int), readSize, coverageFile);
-
-        for(int z = 0; z < samples-1; z++){
-            for(int x = z+1; x < samples; x++){
-                for(int y = 0; y < n; y++){
-                    if((colors[y] == z || colors[y] == x) && summarizedSL[y] > k)
-                        printf("%d ", colors[y]);
-                }
-                printf("\n");
-                for(int y = 0; y < n; y++){
-                    if((colors[y] == z || colors[y] == x) && summarizedSL[y] > k)
-                        printf("%d ", summarizedSL[y]);
-                }
-                printf("\n");
-
-                for(int y = 0; y < n; y++){
-                    if((colors[y] == z || colors[y] == x) && summarizedSL[y] > k)
-                        printf("%d ", summarizedLCP[y]);
-                }
-                printf("\n");
-            }
-        }
-
         rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
         for(i = 0; i < samples; i++){
             rbv[i] = rankbv_create(readSize, 2);
