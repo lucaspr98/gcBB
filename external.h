@@ -12,3 +12,5 @@ void printDistanceMatrixes(double **Dm, double **De, char **files, int files_n, 
     1: append to file "+1";
 */
 FILE* getInfoFile(char* file1, char* file2, int k, int update);
+
+FILE* getBossInfoFile(char* file1, char* file2, int k, int write);

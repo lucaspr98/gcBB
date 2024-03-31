@@ -80,7 +80,7 @@ void addEdge(char *W, short **last, short *colors, short *summarizedLCP, short *
     }
 }
 
-size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *totalSampleCoverageInBoss, size_t *totalSampleColorsInBoss){
+void bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss){
     // Iterators
     unsigned long i = 0; // iterates through Wi
     int j = 0;
@@ -140,7 +140,7 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
             printf("BOSS needed files already computed\n");
             fclose(bossColorsFileExists);
             free(LCP); free(BWT); free(DA); free(SL);
-            return 0;
+            return;
         }
     #endif
     
@@ -177,6 +177,9 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
 
     int dummiesFreq[samples][ALPHABET_SIZE]; // frequency of outgoing edges from dummy inputs of size 1 ($)
     memset(dummiesFreq, 0,  sizeof(int)*samples*ALPHABET_SIZE);
+
+    size_t *totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
+    size_t *totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
 
     while(bi < n){
 
@@ -329,22 +332,29 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     C[4] = C['G'] + C[3];
     C[5] = C['N'] + C[4];
     C[0] = 0;
-    
+
+    #if ALL_VS_ALL
+    FILE *bossInfoFile = getBossInfoFile(file1, NULL, k, 1);
+    #else
+    FILE *bossInfoFile = getBossInfoFile(file1, file2, k, 1);
+    #endif
+
+    fprintf(bossInfoFile, "%ld\n", i);
+    for(j = 0; j < samples; j++){
+        fprintf(bossInfoFile, "%ld ", totalSampleColorsInBoss[j]);
+    }
+    fprintf(bossInfoFile, "\n");
+    for(j = 0; j < samples; j++){
+        fprintf(bossInfoFile, "%ld ", totalSampleCoverageInBoss[j]);
+    }
+    fprintf(bossInfoFile, "\n");
+    fclose(bossInfoFile);
+
     #if ALL_VS_ALL
     FILE *infoFile = getInfoFile(file1, NULL, k, 0);
     #else
     FILE *infoFile = getInfoFile(file1, file2, k, 0);
     #endif
-
-    fprintf(infoFile, "%ld\n", i);
-    for(j = 0; j < samples; j++){
-        fprintf(infoFile, "%ld ", totalSampleColorsInBoss[j]);
-    }
-    fprintf(infoFile, "\n");
-    for(j = 0; j < samples; j++){
-        fprintf(infoFile, "%ld ", totalSampleCoverageInBoss[j]);
-    }
-    fprintf(infoFile, "\n");
 
     #if DEBUG
     char alphabet[6] = {'$', 'A', 'C', 'G', 'N', 'T'};
@@ -365,10 +375,10 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     fclose(infoFile);
 
     // free BOSS construction needed variables
-    free(LCP); free(BWT); free(DA); free(SL);
+    // free(LCP); free(BWT); free(DA); free(SL);
     
     // free BOSS construction variables
-    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
+    // free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
     
     if(printBoss){
         fclose(bossLastFile);
@@ -385,7 +395,7 @@ size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mer
     fclose(bossSummarizedLCPFile);
     fclose(bossSummarizedSLFile);
 
-    return i;
+    return;
 };
 
 void printBOSSDebug(unsigned long bossLength, FILE* infoFile, char* file1, char* file2, char* alphabet, int* C, size_t* totalSampleCoverageInBoss, int samples){

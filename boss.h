@@ -2,7 +2,7 @@ void WiSort(char *Wi, short *Wm, short *colors, int *coverage, short *summarized
 
 void fixWiLCP(char *W, short *summarizedLCP, int k, int WiSize);
 
-size_t bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss, size_t *totalSampleCoverageInBoss, size_t *totalSampleColorsInBoss);
+void bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *mergeSL, size_t n, int k, int samples, int mem, char* file1, char* file2, int printBoss);
 
 /* edgeStatus:
    0: any outgoing edge besides the last one
