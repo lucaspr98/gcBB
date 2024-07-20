@@ -249,13 +249,10 @@ int main(int argc, char *argv[]){
         int samples = numberOfFiles;
     #endif
 
-    size_t *totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
-    size_t *totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
-
     #if !ALL_VS_ALL
-        unsigned long bossLen = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
+        bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, files[i], files[j], printBoss);
     #else
-        unsigned long bossLen = bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, path, NULL, printBoss, totalSampleCoverageInBoss, totalSampleColorsInBoss);
+        bossConstruction(mergeLCP, mergeDA, mergeBWT, mergeSL, n, k, samples, memory, path, NULL, printBoss);
     #endif
 
     fclose(mergeBWT);
@@ -266,9 +263,9 @@ int main(int argc, char *argv[]){
     #if ALL_VS_ALL
         printf("=== PHASE 3 ===\n");
         #if COVERAGE
-            bwsdAll(path, numberOfFiles, bossLen, totalSampleCoverageInBoss, k, memory, Dm, De);
+            bwsdAll(path, numberOfFiles, k, memory, Dm, De);
         #else 
-            bwsdAll(path, numberOfFiles, bossLen, totalSampleColorsInBoss, k, memory, Dm, De);
+            bwsdAll(path, numberOfFiles, k, memory, Dm, De);
         #endif
     #endif
 
@@ -280,12 +277,10 @@ int main(int argc, char *argv[]){
         printf("=== PHASE 3 [%d,%d] ===\n", i, j);
         double expectation, entropy;
         expectation = entropy = 0.0;
-        bwsd(files[i], files[j], bossLen, k, &expectation, &entropy, memory, printBoss, totalSampleCoverageInBoss[i]+totalSampleCoverageInBoss[j], 0, 1);            
+        bwsd(files[i], files[j], k, &expectation, &entropy, memory, printBoss, 0, 1);            
         Dm[j][i] = expectation;
         De[j][i] = entropy;
     #endif
-
-    free(totalSampleCoverageInBoss); free(totalSampleColorsInBoss);
 
     #if !ALL_VS_ALL
         printf("For more details check file: results/%s-%s_k_%d.info\n", files[i], files[j], k);

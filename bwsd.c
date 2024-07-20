@@ -74,12 +74,36 @@ void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rlFreq, size_
     return;
 }
 
-void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t totalCoverage, int consider1, int consider2){
+bossInfo *getBossInfo(char* file1, char* file2, int k, int samples){
+    FILE *infoFile = getBossInfoFile(file1, file2, k, 0);
+
+    bossInfo *bossInfo = calloc(1,sizeof(*bossInfo));
+    bossInfo->totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
+    bossInfo->totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
+
+    fscanf(infoFile, "%ld", &(bossInfo->bossLen));
+    for(int i = 0; i < samples; i++){
+        fscanf(infoFile, "%ld", &(bossInfo->totalSampleColorsInBoss[i]));
+    }
+    for(int i = 0; i < samples; i++){
+        fscanf(infoFile, "%ld", &(bossInfo->totalSampleCoverageInBoss[i]));
+    }
+
+    fclose(infoFile);
+
+    return bossInfo;
+}
+
+void bwsd(char* file1, char* file2, int k, double *expectation, double *entropy, int mem, int printBoss, int consider1, int consider2){
     size_t i;
+
+    bossInfo *info = getBossInfo(file1, file2, k, 2);
+    unsigned long n = info->bossLen;
+    size_t totalCoverage = info->totalSampleCoverageInBoss[consider1] +  info->totalSampleCoverageInBoss[consider2];
     #if COVERAGE
         size_t size = totalCoverage+1;
     #else
-       size_t size = n+1;
+        size_t size = n+1;
     #endif
 
     // Count computation time
@@ -227,10 +251,10 @@ void bwsd(char* file1, char* file2, size_t n, int k, double *expectation, double
     fclose(coverageFile);
     
     if(!printBoss){
-        remove(colorFileName);
-        remove(summarizedLCPFileName);
-        remove(summarizedSLFileName);
-        remove(coverageFileName);
+        // remove(colorFileName);
+        // remove(summarizedLCPFileName);
+        // remove(summarizedSLFileName);
+        // remove(coverageFileName);
     }
 
     FILE* infoFile = getInfoFile(file1, file2, k, 1);
@@ -298,36 +322,7 @@ int getLastLCPGreaterThanKPos(short *lcp, int k, int intervalStart, int interval
     return pos;
 }
 
-
-bossInfo *getBossInfo(char* path, int samples, int k){
-    char info[FILE_PATH];
-    #if COVERAGE
-        sprintf(info, "results/%s_k_%d_cov_all.info", path, k);
-    #else
-        sprintf(info, "results/%s_k_%d_all.info", path, k);
-    #endif
-    
-
-    FILE *infoFile = fopen(info, "r");
-    bossInfo *bossInfo = calloc(1,sizeof(*bossInfo));
-    bossInfo->totalSampleColorsInBoss = calloc(samples, sizeof(size_t));
-    bossInfo->totalSampleCoverageInBoss = calloc(samples, sizeof(size_t));
-
-    fscanf(infoFile, "%ld", &(bossInfo->bossLen));
-    for(int i = 0; i < samples; i++){
-        fscanf(infoFile, "%ld", &(bossInfo->totalSampleColorsInBoss[i]));
-    }
-    for(int i = 0; i < samples; i++){
-        fscanf(infoFile, "%ld", &(bossInfo->totalSampleCoverageInBoss[i]));
-    }
-
-    fclose(infoFile);
-
-    return bossInfo;
-}
-
-
-void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_aux, int k, int mem, double** Dm, double** De){
+void bwsdAll(char* path, int samples, int k, int mem, double** Dm, double** De){
     size_t i, j, z;
 
     // Count computation time
@@ -336,7 +331,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
 
     startClock = clock();
 
-    bossInfo *info = getBossInfo(path, samples, k);
+    bossInfo *info = getBossInfo(path, NULL, k, samples);
     unsigned long n = info->bossLen;
     #if COVERAGE
         size_t *sampleSize = info->totalSampleCoverageInBoss;
@@ -391,7 +386,6 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
         fread(summarizedLCP, sizeof(short), readSize, summarizedLCPFile);
         fread(summarizedSL, sizeof(short), readSize, summarizedSLFile);
         fread(coverage, sizeof(int), readSize, coverageFile);
-
         rankbv_t **rbv = malloc(samples*sizeof(rankbv_t));
         for(i = 0; i < samples; i++){
             rbv[i] = rankbv_create(readSize, 2);
@@ -415,7 +409,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
                 intervalEnd = rankbv_select1(rbv[i], z);
                 // last interval of the block
                 if(intervalEnd == -1) intervalEnd = readSize;
-                 int lcpPos = -1;
+                int lcpPos = -1;
                 if(needsToFindLcpNextBlock){
                     lcpPos = getLastLCPGreaterThanKPos(summarizedLCP, k, intervalStart, intervalEnd);
                     if(lcpPos < intervalEnd && intervalEnd == readSize && rankbv_access(rbv[i], intervalEnd) == 1)
@@ -460,7 +454,7 @@ void bwsdAll(char* path, int samples, unsigned long n_aux, size_t *sampleSize_au
                                     tij[row][qtd-1]++;
                                     tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd-1,MAX(difference, lastIRank[row]-1)));
                                 } else {
-                            #endif 
+                            #endif
                                 tij[row][lastIRank[row]]++;
                                 tij[row][qtd]++;
                                 tijMaxFreq[row] = MAX(tijMaxFreq[row], MAX(qtd,lastIRank[row]));

@@ -177,6 +177,21 @@ void printDistanceMatrixes(double **Dm, double **De, char **files, int files_n, 
     computeNewickFiles(expectationDmat);
 }
 
+FILE* getBossInfoFile(char* file1, char* file2, int k, int write){
+    char bossInfo[FILE_PATH];
+
+    #if ALL_VS_ALL
+    sprintf(bossInfo, "results/%s_k_%d_boss.info", file1, k);
+    #else
+    sprintf(bossInfo, "results/%s-%s_k_%d_boss.info", file1, file2, k);   
+    #endif
+
+    if(write){
+        return fopen(bossInfo, "w");
+    }
+    return fopen(bossInfo, "r");
+}
+
 FILE* getInfoFile(char* file1, char* file2, int k, int update){
     char info[FILE_PATH];
 

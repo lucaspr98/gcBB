@@ -1,7 +1,7 @@
 
-void bwsd(char* file1, char* file2, unsigned long n, int k, double *expectation, double *entropy, int mem, int printBoss, size_t totalCoverage, int consider1, int consider2);
+void bwsd(char* file1, char* file2, int k, double *expectation, double *entropy, int mem, int printBoss, int consider1, int consider2);
 
-void bwsdAll(char* path, int samples, unsigned long n, size_t *sampleSize, int k, int mem, double** Dm, double** De);
+void bwsdAll(char* path, int samples, int k, int mem, double** Dm, double** De);
 
 void applyCoverageMerge(int zeroCoverage, int oneCoverage, size_t *rlFreq, size_t *pos);
 
