@@ -20,7 +20,7 @@ cd gcBB
 To construct the BOSS representation we will use the method described in [[1](https://doi.org/10.1186/s13015-019-0140-0)]. 
 The eGap repository comes within clone with flag `--recursive`.
 
-**Important**: while running eGap, the following error can occurr:
+**Important**: while running eGap, the following error can occur:
 `ModuleNotFoundError: No module named 'psutil'`
 
 To fix it, install python [psutil](https://github.com/giampaolo/psutil/blob/master/INSTALL.rst)
