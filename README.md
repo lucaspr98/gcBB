@@ -18,7 +18,7 @@ make all
 ./gcBB dataset/ -k 3
 ```
 
-The distance matrixes and information on the comparison can be found in results directory. There is also a newick file, which can be used to generate the phylogenetic tree.
+The distance matrixes and information on the comparison can be found in results directory. There is also a newick file (.nhx), which can be used to generate the phylogenetic tree.
 
 If any errors occur, please check the next sections of this README. If none information help you, open an issue and we will keep looking for the problem to fix it as soon as possible.
 
@@ -76,6 +76,7 @@ To construct the BOSS representation and compute the BWSD between all pair of ge
 Consider that `dataset/` contains the following genomes `reads1.fastq`, `reads2.fastq`, `reads3.fastq`.\
 In directory results, there will be the following files: 
 * `dataset_expectation_k_3.dmat` and  `dataset_entropy_k_3.dmat`;
+* `dataset_expectation_k_3.nhx` and  `dataset_entropy_k_3.nhx`;
 * `dataset_k_3_all.info` (**ALL_VS_ALL=1**).
 * `reads1-reads2_k_3.info`, `reads1-reads3_k_3.info`, `reads2-reads3_k_3.info` (**ALL_VS_ALL=0**);
 
@@ -92,6 +93,7 @@ To construct the BOSS representation and compute the BWSD between a pair of geno
 ```
 In directory results, there will be the following files: 
 * `reads1-reads2_expectation_k_16.dmat` and  `reads1-reads2_entropy_k_16.dmat`;
+* `reads1-reads2_expectation_k_16.nhx` and  `reads1-reads2_entropy_k_16.nhx`;
 * `reads1-reads2_k_16.info`.
 
 If the COVERAGE flag was used in make, `cov` will be in the suffix of the outputted files.
