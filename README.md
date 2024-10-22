@@ -6,6 +6,22 @@ Given a collection of _N_ genomes, gcBB uses the BOSS representation and BWSD co
 * Phase 2: Constructs the BOSS representation for each pair of collection or the entire collection at once, depending on the compiled option;
 * Phase 3: Computes the BWSD between all pairs of genomes.
 
+## Quick Start (Toy Example)
+
+```
+git clone https://github.com/lucaspr98/gcBB --recursive
+
+cd gcBB
+
+make all
+
+./gcBB dataset/ -k 3
+```
+
+The distance matrixes and information on the comparison can be found in results directory. There is also a newick file, which can be used to generate the phylogenetic tree.
+
+If any errors occur, please check the next sections of this README. If none information help you, open an issue and we will keep looking for the problem to fix it as soon as possible.
+
 ## Install
 ```sh
 git clone https://github.com/lucaspr98/gcBB --recursive
