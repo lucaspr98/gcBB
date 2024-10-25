@@ -149,10 +149,17 @@ int main(int argc, char *argv[]){
         exit(-1);
     }
 
-    system("mkdir tmp");
-    system("mkdir results");
+    system("mkdir -p tmp");
+    system("mkdir -p results");
 
     qsort(files, numberOfFiles, sizeof(char*), compareFiles);
+
+    /******** Check PSUTIL ********/
+    int result = system("python3 -c \"import psutil\" 2>/dev/null");
+    if (result != 0) {
+        printf("The 'psutil' library is NOT installed.\n");
+        exit(-1);
+    }
 
     /******** Compute external needed files ********/
     printf("=== PHASE 1 ===\n");
