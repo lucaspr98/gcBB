@@ -98,7 +98,10 @@ In directory results, there will be the following files:
 
 If the COVERAGE flag was used in make, `cov` will be in the suffix of the outputted files.
 
-**Obs**: pair fo genomes comparison currently not work with `ALL_VS_ALL=1` compile option.
+**Obs**: pair of genomes comparison currently not work with `ALL_VS_ALL=1` compile option.
+
+**Important**: do not forget the slash (/) in the end of `path_to_dir` argument.
+
 ### Command line options
 *-k*, specify the size of k-mers used in the BOSS construction. The default value is k=32.
 
