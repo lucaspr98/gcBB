@@ -160,6 +160,13 @@ int main(int argc, char *argv[]){
 
     qsort(files, numberOfFiles, sizeof(char*), compareFiles);
 
+    /******** Check PSUTIL ********/
+    int result = system("python3 -c \"import psutil\" 2>/dev/null");
+    if (result != 0) {
+        printf("The 'psutil' library is NOT installed.\n");
+        exit(-1);
+    }
+
     /******** Compute external needed files ********/
     printf("=== PHASE 1 ===\n");
     printf("Start computing SA, BWT and LCP for all files\n");
