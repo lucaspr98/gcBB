@@ -116,21 +116,21 @@ void bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *merge
     char bossSummarizedSL[FILE_PATH];
 
     #if ALL_VS_ALL
-        sprintf(bossLast, "results/%s_k_%d.2.last", file1, k);
-        sprintf(bossW, "results/%s_k_%d.1.W", file1, k);
-        sprintf(bossWm, "results/%s_k_%d.2.Wm", file1, k);
-        sprintf(bossColors, "results/%s_k_%d.2.colors", file1, k);
-        sprintf(bossCoverage, "results/%s_k_%d.4.coverage", file1, k);
-        sprintf(bossSummarizedLCP, "results/%s_k_%d.2.summarizedLCP", file1, k);
-        sprintf(bossSummarizedSL, "results/%s_k_%d.2.summarizedSL", file1, k);
+        snprintf(bossLast, FILE_PATH, "results/%s_k_%d.2.last", file1, k);
+        snprintf(bossW, FILE_PATH, "results/%s_k_%d.1.W", file1, k);
+        snprintf(bossWm, FILE_PATH, "results/%s_k_%d.2.Wm", file1, k);
+        snprintf(bossColors, FILE_PATH, "results/%s_k_%d.2.colors", file1, k);
+        snprintf(bossCoverage, FILE_PATH, "results/%s_k_%d.4.coverage", file1, k);
+        snprintf(bossSummarizedLCP, FILE_PATH, "results/%s_k_%d.2.summarizedLCP", file1, k);
+        snprintf(bossSummarizedSL, FILE_PATH, "results/%s_k_%d.2.summarizedSL", file1, k);
     #else
-        sprintf(bossLast, "results/%s-%s_k_%d.2.last", file1, file2, k);
-        sprintf(bossW, "results/%s-%s_k_%d.1.W", file1, file2, k);
-        sprintf(bossWm, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
-        sprintf(bossColors, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-        sprintf(bossCoverage, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
-        sprintf(bossSummarizedLCP, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
-        sprintf(bossSummarizedSL, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
+        snprintf(bossLast, FILE_PATH, "results/%s-%s_k_%d.2.last", file1, file2, k);
+        snprintf(bossW, FILE_PATH, "results/%s-%s_k_%d.1.W", file1, file2, k);
+        snprintf(bossWm, FILE_PATH, "results/%s-%s_k_%d.2.Wm", file1, file2, k);
+        snprintf(bossColors, FILE_PATH, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+        snprintf(bossCoverage, FILE_PATH, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+        snprintf(bossSummarizedLCP, FILE_PATH, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
+        snprintf(bossSummarizedSL, FILE_PATH, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
     #endif
 
 
@@ -342,11 +342,15 @@ void bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *merge
     fprintf(bossInfoFile, "%ld\n", i);
     for(j = 0; j < samples; j++){
         fprintf(bossInfoFile, "%ld ", totalSampleColorsInBoss[j]);
+        // free(totalSampleColorsInBoss[j]);
     }
+    free(totalSampleColorsInBoss);
     fprintf(bossInfoFile, "\n");
     for(j = 0; j < samples; j++){
         fprintf(bossInfoFile, "%ld ", totalSampleCoverageInBoss[j]);
+        // free(totalSampleCoverageInBossm[j]);
     }
+    free(totalSampleCoverageInBoss);
     fprintf(bossInfoFile, "\n");
     fclose(bossInfoFile);
 
@@ -375,16 +379,19 @@ void bossConstruction(FILE *mergeLCP, FILE *mergeDA, FILE *mergeBWT, FILE *merge
     fclose(infoFile);
 
     // free BOSS construction needed variables
-    // free(LCP); free(BWT); free(DA); free(SL);
+    free(LCP); free(BWT); free(DA); free(SL);
     
     // free BOSS construction variables
-    // free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
+    free(last); free(W); free(Wm); free(colors); free(coverage); free(summarizedLCP); free(summarizedSL);
     
     if(printBoss){
         fclose(bossLastFile);
         fclose(bossWFile);
         fclose(bossWm_file);
     } else {
+        fclose(bossLastFile);
+        fclose(bossWFile);
+        fclose(bossWm_file);
         remove(bossLast);
         remove(bossW);
         remove(bossWm);

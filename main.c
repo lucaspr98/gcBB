@@ -104,7 +104,7 @@ int main(int argc, char *argv[]){
         int len;
         pathLen = strlen(argv[argc-1]);
         path = (char*)malloc((pathLen+1)*sizeof(char));
-        strcpy(path, argv[argc-1]);
+        strncpy(path, argv[argc-1], pathLen+1);
 
         folder = opendir(argv[argc-1]);
         if(folder == NULL){
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]){
                 len = strlen(entry->d_name)+1;
                 files[numberOfFiles] = (char*)malloc((pathLen+len+2)*sizeof(char));
 
-                strcpy(files[numberOfFiles], entry->d_name);
+                strncpy(files[numberOfFiles], entry->d_name, pathLen+len+2);
                 numberOfFiles++;
             }
         }
@@ -129,15 +129,15 @@ int main(int argc, char *argv[]){
         int fileLen;
         pathLen = strlen(argv[argc-3]);
         path = (char*)malloc((pathLen+1)*sizeof(char));
-        strcpy(path, argv[argc-3]);
+        strncpy(path, argv[argc-3], pathLen+1);
 
         fileLen = strlen(argv[argc-2]);
         files[0] = (char*)malloc((fileLen+1)*sizeof(char));
-        strcpy(files[0], argv[argc-2]);
+        strncpy(files[0], argv[argc-2], fileLen+1);
 
         fileLen = strlen(argv[argc-1]);
         files[1] = (char*)malloc((fileLen+1)*sizeof(char));
-        strcpy(files[1], argv[argc-1]);
+        strncpy(files[1], argv[argc-1], fileLen+1);
         
         numberOfFiles = 2;
     } else {
@@ -149,8 +149,14 @@ int main(int argc, char *argv[]){
         exit(-1);
     }
 
-    system("mkdir tmp");
-    system("mkdir results");
+    int systemTmp = system("mkdir tmp");
+    if(systemTmp == -1){
+        printf("Error creating tmp folder");
+    }
+    int systemResults = system("mkdir results");
+    if(systemResults == -1){
+        printf("Error creating results folder");
+    }
 
     qsort(files, numberOfFiles, sizeof(char*), compareFiles);
 
@@ -222,15 +228,15 @@ int main(int argc, char *argv[]){
     char mergeSLFile[FILE_PATH];
 
     #if !ALL_VS_ALL
-        sprintf(mergeBWTFile, "tmp/merge.%s-%s.bwt", files[i], files[j]);
-        sprintf(mergeLCPFile, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
-        sprintf(mergeDAFile, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
-        sprintf(mergeSLFile, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
+        snprintf(mergeBWTFile, FILE_PATH, "tmp/merge.%s-%s.bwt", files[i], files[j]);
+        snprintf(mergeLCPFile, FILE_PATH, "tmp/merge.%s-%s.2.lcp", files[i], files[j]);
+        snprintf(mergeDAFile, FILE_PATH, "tmp/merge.%s-%s.1.cda", files[i], files[j]);
+        snprintf(mergeSLFile, FILE_PATH, "tmp/merge.%s-%s.2.sl", files[i], files[j]);
     #else
-        sprintf(mergeBWTFile, "tmp/merge.%s.bwt", path);
-        sprintf(mergeLCPFile, "tmp/merge.%s.2.lcp", path);
-        sprintf(mergeDAFile, "tmp/merge.%s.1.cda", path);
-        sprintf(mergeSLFile, "tmp/merge.%s.2.sl", path);
+        snprintf(mergeBWTFile, FILE_PATH, "tmp/merge.%s.bwt", path);
+        snprintf(mergeLCPFile, FILE_PATH, "tmp/merge.%s.2.lcp", path);
+        snprintf(mergeDAFile, FILE_PATH, "tmp/merge.%s.1.cda", path);
+        snprintf(mergeSLFile, FILE_PATH, "tmp/merge.%s.2.sl", path);
     #endif
 
     FILE *mergeBWT = fopen(mergeBWTFile, "r");
@@ -300,14 +306,14 @@ int main(int argc, char *argv[]){
         char summarizedLCPFileName[FILE_PATH];
         char summarizedSLFileName[FILE_PATH];
         char coverageFileName[FILE_PATH];
-        sprintf(colorFileName, "results/%s_k_%d.2.colors", path, k);
-        sprintf(summarizedLCPFileName, "results/%s_k_%d.2.summarizedLCP", path, k);
-        sprintf(summarizedSLFileName, "results/%s_k_%d.2.summarizedSL", path, k);
-        sprintf(coverageFileName, "results/%s_k_%d.4.coverage", path, k);
-        // remove(colorFileName);
-        // remove(summarizedLCPFileName);
-        // remove(summarizedSLFileName);
-        // remove(coverageFileName);
+        snprintf(colorFileName, FILE_PATH, "results/%s_k_%d.2.colors", path, k);
+        snprintf(summarizedLCPFileName, FILE_PATH, "results/%s_k_%d.2.summarizedLCP", path, k);
+        snprintf(summarizedSLFileName, FILE_PATH, "results/%s_k_%d.2.summarizedSL", path, k);
+        snprintf(coverageFileName, FILE_PATH, "results/%s_k_%d.4.coverage", path, k);
+        remove(colorFileName);
+        remove(summarizedLCPFileName);
+        remove(summarizedSLFileName);
+        remove(coverageFileName);
     }
     #endif
 

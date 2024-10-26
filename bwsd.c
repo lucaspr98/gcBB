@@ -122,10 +122,10 @@ void bwsd(char* file1, char* file2, int k, double *expectation, double *entropy,
     char summarizedSLFileName[FILE_PATH];
     char coverageFileName[FILE_PATH];
 
-    sprintf(colorFileName, "results/%s-%s_k_%d.2.colors", file1, file2, k);
-    sprintf(summarizedLCPFileName, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
-    sprintf(summarizedSLFileName, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
-    sprintf(coverageFileName, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
+    snprintf(colorFileName, FILE_PATH, "results/%s-%s_k_%d.2.colors", file1, file2, k);
+    snprintf(summarizedLCPFileName, FILE_PATH, "results/%s-%s_k_%d.2.summarizedLCP", file1, file2, k);
+    snprintf(summarizedSLFileName, FILE_PATH, "results/%s-%s_k_%d.2.summarizedSL", file1, file2, k);
+    snprintf(coverageFileName, FILE_PATH, "results/%s-%s_k_%d.4.coverage", file1, file2, k);
     
     FILE *colorsFile = fopen(colorFileName, "rb");
     FILE *summarizedLCPFile = fopen(summarizedLCPFileName, "rb");
@@ -349,10 +349,10 @@ void bwsdAll(char* path, int samples, int k, int mem, double** Dm, double** De){
     char summarizedSLFileName[FILE_PATH];
     char coverageFileName[FILE_PATH];
 
-    sprintf(colorFileName, "results/%s_k_%d.2.colors", path, k);
-    sprintf(summarizedLCPFileName, "results/%s_k_%d.2.summarizedLCP", path, k);
-    sprintf(summarizedSLFileName, "results/%s_k_%d.2.summarizedSL", path, k);
-    sprintf(coverageFileName, "results/%s_k_%d.4.coverage", path, k);
+    snprintf(colorFileName, FILE_PATH, "results/%s_k_%d.2.colors", path, k);
+    snprintf(summarizedLCPFileName, FILE_PATH, "results/%s_k_%d.2.summarizedLCP", path, k);
+    snprintf(summarizedSLFileName, FILE_PATH, "results/%s_k_%d.2.summarizedSL", path, k);
+    snprintf(coverageFileName, FILE_PATH, "results/%s_k_%d.4.coverage", path, k);
     
     FILE *colorsFile = fopen(colorFileName, "rb");
     FILE *summarizedLCPFile = fopen(summarizedLCPFileName, "rb");
