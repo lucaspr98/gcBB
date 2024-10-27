@@ -33,8 +33,8 @@ void computeFile(char *path, char *file, int memory){
     if(ptr != NULL)
         *ptr = '\0';
 
-    char output[len+10];
-    snprintf(output, len+10, "tmp/%s.bwt", file);
+    char output[len+8];
+    snprintf(output, len+8, "tmp/%s.bwt", file);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGap[FILE_PATH];
@@ -50,16 +50,17 @@ void computeFile(char *path, char *file, int memory){
 }
 
 void computeMergeFileAll(char *path, char **files, int numberOfFiles, int memory){
-    char output[strlen(path)+17];
-    snprintf(output, strlen(path)+17, "tmp/merge.%s.bwt", path);
+    char output[strlen(path)+14];
+    snprintf(output, strlen(path)+14, "tmp/merge.%s.bwt", path);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
         snprintf(eGapMerge, FILE_PATH, "egap/eGap -m %d --em --bwt --lcp --cda --cbytes 1 --sl --slbytes 2 ", memory);
-        int bufferLen = FILE_PATH + strlen(eGapMerge);
-        for(int i = 0; i < numberOfFiles; i++)
-            snprintf(eGapMerge + strlen(eGapMerge), bufferLen, " tmp/%s.bwt ", files[i]);
-        snprintf(eGapMerge + strlen(eGapMerge), bufferLen,  " -o tmp/merge.%s", path);
+        for(int i = 0; i < numberOfFiles; i++){
+            int bufferLen = strlen(eGapMerge) + strlen(files[i]) + 9;
+            snprintf(eGapMerge + strlen(eGapMerge), bufferLen, "tmp/%s.bwt ", files[i]);
+        }
+        snprintf(eGapMerge + strlen(eGapMerge), strlen(eGapMerge)+strlen(path)+13, "-o tmp/merge.%s", path);
         printf("%s\n", eGapMerge);
         int systemCall = system(eGapMerge);
         if(systemCall == -1){
@@ -75,8 +76,8 @@ void computeMergeFiles(char *path, char *file1, char *file2, int memory){
     int len1 = strlen(file1); 
     int len2 = strlen(file2);
 
-    char output[len1+len2+12];
-    snprintf(output, len1+len2+12, "tmp/merge.%s-%s.bwt", file1, file2);
+    char output[len1+len2+15];
+    snprintf(output, len1+len2+15, "tmp/merge.%s-%s.bwt", file1, file2);
     FILE *tmp = fopen(output, "r");
     if(!tmp){
         char eGapMerge[FILE_PATH];
